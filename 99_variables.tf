@@ -5,7 +5,7 @@
 variable "resource_group_name" {
   description = "Nom du groupe de ressources Azure"
   type        = string
-  default     = "rg-MBailleul2024_cours-adminazure-projet"
+  default     = "rg-MAudoire2025_cours-adminazure-projet"
 }
 
 variable "location" {
@@ -30,35 +30,35 @@ variable "subscription_id" {
 # Utilise plutôt un terraform.tfvars non versionné ou des variables d'environnement.
 ############################
 
-variable "ovh_endpoint" {
-  description = "Endpoint OVH (ex: ovh-eu)"
-  type        = string
-  default     = "ovh-eu"
-}
+# variable "ovh_endpoint" {
+#   description = "Endpoint OVH (ex: ovh-eu)"
+#   type        = string
+#   default     = "ovh-eu"
+# }
 
-variable "ovh_application_key" {
-  description = "OVH application key"
-  type        = string
-  sensitive   = true
-}
+# variable "ovh_application_key" {
+#   description = "OVH application key"
+#   type        = string
+#   sensitive   = true
+# }
 
-variable "ovh_application_secret" {
-  description = "OVH application secret"
-  type        = string
-  sensitive   = true
-}
+# variable "ovh_application_secret" {
+#   description = "OVH application secret"
+#   type        = string
+#   sensitive   = true
+# }
 
-variable "ovh_consumer_key" {
-  description = "OVH consumer key"
-  type        = string
-  sensitive   = true
-}
+# variable "ovh_consumer_key" {
+#   description = "OVH consumer key"
+#   type        = string
+#   sensitive   = true
+# }
 
-variable "ovh_zone" {
-  description = "Zone DNS OVH (domaine)"
-  type        = string
-  default     = "formateur-devops.ovh"
-}
+# variable "ovh_zone" {
+#   description = "Zone DNS OVH (domaine)"
+#   type        = string
+#   default     = "formateur-devops.ovh"
+# }
 
 variable "firewall_public_subdomain" {
   description = "Sous-domaine public du firewall (ex: firewall -> firewall.domaine.ovh)"

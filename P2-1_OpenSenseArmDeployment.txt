@@ -1,0 +1,3 @@
+RAS ici, juste renseigner les champs dans le modèle de déploiement (lien dans le sujet)
+Pour des question de performance et éviter que ça plante, le disque est laissé par défaut dans le modèle (premium_lrs). 
+
