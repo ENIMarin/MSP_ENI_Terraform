@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔧 Terraform Toolbox — ENI | IAC avec Azure</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&family=JetBrains+Mono:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #0e1a2b;
+    --surface: #152236;
+    --surface2: #1b2d45;
+    --border: #2a3f58;
+    --primary: #00b0ca;
+    --accent: #8dc63f;
+    --warn: #c8a820;
+    --danger: #e05050;
+    --purple: #4a90b8;
+    --orange: #7a8c3a;
+    --text: #d4e1ee;
+    --muted: #7a97b5;
+    --code-bg: #0a1520;
+    --tip-bg: #0d2535;
+    --note-bg: #152236;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Open Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, #0e1a2b 0%, #152236 50%, #1a3050 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(0,176,202,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    right: 5%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(141,198,63,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .header-title h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: white;
+    letter-spacing: -0.5px;
+  }
+  .header-title h1 span { color: var(--primary); }
+  .header-title p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 0.3rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .badge-blue { background: rgba(0,176,202,0.15); color: var(--primary); border: 1px solid rgba(0,176,202,0.3); }
+  .badge-green { background: rgba(141,198,63,0.15); color: var(--accent); border: 1px solid rgba(141,198,63,0.3); }
+  .badge-purple { background: rgba(74,144,184,0.15); color: var(--purple); border: 1px solid rgba(74,144,184,0.3); }
+
+  /* NAV */
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-inner::-webkit-scrollbar { display: none; }
+  .nav-tab {
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* MAIN */
+  main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .section { display: none; animation: fadeIn 0.3s ease; }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* CARDS GRID */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .grid-3 { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--primary); }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+  .icon-blue { background: rgba(0,176,202,0.15); }
+  .icon-green { background: rgba(141,198,63,0.15); }
+  .icon-orange { background: rgba(122,140,58,0.15); }
+  .icon-purple { background: rgba(74,144,184,0.15); }
+  .icon-red { background: rgba(224,80,80,0.15); }
+  .icon-yellow { background: rgba(200,168,32,0.15); }
+
+  .card-header h3 { font-size: 0.95rem; font-weight: 700; color: white; }
+  .card p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; margin-bottom: 0.5rem; }
+
+  /* CODE BLOCKS */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    overflow-x: auto;
+    position: relative;
+    margin: 0.75rem 0;
+  }
+  .code-block .label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .kw { color: #ff7b72; }
+  .str { color: #a5d6ff; }
+  .val { color: var(--orange); }
+  .cmt { color: #6e7681; font-style: italic; }
+  .fn { color: var(--purple); }
+  .ref { color: var(--accent); }
+
+  .copy-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { color: white; border-color: var(--primary); }
+
+  /* TIP BOX */
+  .tip {
+    background: var(--tip-bg);
+    border-left: 3px solid var(--primary);
+    border-radius: 0 8px 8px 0;
+    padding: 0.75rem 1rem;
+    margin: 0.75rem 0;
+    font-size: 0.85rem;
+  }
+  .tip strong { color: var(--primary); }
+  .tip.warn { background: rgba(200,168,32,0.1); border-left-color: var(--warn); }
+  .tip.warn strong { color: var(--warn); }
+  .tip.danger { background: rgba(224,80,80,0.1); border-left-color: var(--danger); }
+  .tip.danger strong { color: var(--danger); }
+  .tip.success { background: rgba(141,198,63,0.1); border-left-color: var(--accent); }
+  .tip.success strong { color: var(--accent); }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section-subtitle {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-weight: 600;
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(48,54,61,0.5); vertical-align: top; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1.5rem; overflow-x: auto; }
+
+  code { 
+    font-family: 'JetBrains Mono', monospace; 
+    background: rgba(0,176,202,0.1); 
+    color: var(--primary);
+    padding: 0.15em 0.4em; 
+    border-radius: 4px; 
+    font-size: 0.85em; 
+  }
+
+  /* ACCORDION */
+  .accordion { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1rem; }
+  .accordion-header {
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+    color: white;
+  }
+  .accordion-header:hover { background: var(--surface2); }
+  .accordion-header .chevron { transition: transform 0.2s; color: var(--muted); }
+  .accordion-header.open .chevron { transform: rotate(180deg); }
+  .accordion-body { display: none; padding: 1.25rem; background: var(--surface2); border-top: 1px solid var(--border); }
+  .accordion-body.open { display: block; }
+
+  /* SEARCH */
+  .search-bar {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    outline: none;
+    transition: border-color 0.2s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%237a97b5' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.44 1.906A5 5 0 1 1 8 3a5 5 0 0 1-1.698 9.25z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 0.75rem center;
+  }
+  .search-bar:focus { border-color: var(--primary); }
+  .search-bar::placeholder { color: var(--muted); }
+
+  /* LINKS */
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .link-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+  .link-card:hover { border-color: var(--primary); background: var(--surface2); text-decoration: none; }
+  .link-card .lc-icon { font-size: 1.2rem; }
+  .link-card .lc-text { font-size: 0.85rem; }
+  .link-card .lc-text strong { color: white; display: block; font-size: 0.9rem; }
+  .link-card .lc-text span { color: var(--muted); font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; }
+
+  /* QUIZ */
+  .quiz-q {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .quiz-q .question { font-weight: 700; color: white; margin-bottom: 0.75rem; font-size: 0.95rem; }
+  .quiz-option {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 0.4rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .quiz-option:hover { border-color: var(--primary); color: white; }
+  .quiz-option.correct { background: rgba(141,198,63,0.15); border-color: var(--accent); color: var(--accent); }
+  .quiz-option.wrong { background: rgba(224,80,80,0.1); border-color: var(--danger); color: var(--danger); }
+  .quiz-explanation {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(0,176,202,0.07);
+    border-radius: 6px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    display: none;
+  }
+  .quiz-explanation.show { display: block; }
+
+  .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.72rem; font-weight: 600; margin-right: 0.3rem; }
+  .tag-blue { background: rgba(0,176,202,0.15); color: var(--primary); }
+  .tag-green { background: rgba(141,198,63,0.15); color: var(--accent); }
+  .tag-orange { background: rgba(122,140,58,0.15); color: var(--orange); }
+
+  h4 { color: white; font-size: 0.9rem; margin: 1.25rem 0 0.5rem; }
+  h4:first-child { margin-top: 0; }
+
+  /* WORKFLOW DIAGRAM */
+  .workflow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+  }
+  .wf-step {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    min-width: 110px;
+  }
+  .wf-step .wf-icon { font-size: 1.4rem; }
+  .wf-step .wf-name { font-size: 0.75rem; font-weight: 700; color: white; margin-top: 0.3rem; font-family: 'JetBrains Mono', monospace; }
+  .wf-step .wf-cmd { font-size: 0.65rem; color: var(--primary); font-family: 'JetBrains Mono', monospace; }
+  .wf-arrow { color: var(--muted); font-size: 1.2rem; padding: 0 0.3rem; }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-title" style="display:flex;align-items:center;gap:1.5rem;">
+      <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAgEASABIAAD/7QAsUGhvdG9zaG9wIDMuMAA4QklNA+0AAAAAABAASAAAAAEAAQBIAAAAAQAB/+FL52h0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8APD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS4zLWMwMTEgNjYuMTQ1NjYxLCAyMDEyLzAyLzA2LTE0OjU2OjI3ICAgICAgICAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iPgogICAgICAgICA8ZGM6Zm9ybWF0PmltYWdlL2pwZWc8L2RjOmZvcm1hdD4KICAgICAgICAgPGRjOnRpdGxlPgogICAgICAgICAgICA8cmRmOkFsdD4KICAgICAgICAgICAgICAgPHJkZjpsaSB4bWw6bGFuZz0ieC1kZWZhdWx0Ij5JbXByZXNzaW9uPC9yZGY6bGk+CiAgICAgICAgICAgIDwvcmRmOkFsdD4KICAgICAgICAgPC9kYzp0aXRsZT4KICAgICAgPC9yZGY6RGVzY3JpcHRpb24+CiAgICAgIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAgICAgICAgICAgIHhtbG5zOnhtcD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLyIKICAgICAgICAgICAgeG1sbnM6eG1wR0ltZz0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL2cvaW1nLyI+CiAgICAgICAgIDx4bXA6TWV0YWRhdGFEYXRlPjIwMTYtMTAtMTNUMTA6MzU6NDQrMDI6MDA8L3htcDpNZXRhZGF0YURhdGU+CiAgICAgICAgIDx4bXA6TW9kaWZ5RGF0ZT4yMDE2LTEwLTEzVDA4OjM1OjQ4WjwveG1wOk1vZGlmeURhdGU+CiAgICAgICAgIDx4bXA6Q3JlYXRlRGF0ZT4yMDE2LTEwLTEzVDEwOjM1OjQ0KzAyOjAwPC94bXA6Q3JlYXRlRGF0ZT4KICAgICAgICAgPHhtcDpDcmVhdG9yVG9vbD5BZG9iZSBJbGx1c3RyYXRvciBDUzYgKFdpbmRvd3MpPC94bXA6Q3JlYXRvclRvb2w+CiAgICAgICAgIDx4bXA6VGh1bWJuYWlscz4KICAgICAgICAgICAgPHJkZjpBbHQ+CiAgICAgICAgICAgICAgIDxyZGY6bGkgcmRmOnBhcnNlVHlwZT0iUmVzb3VyY2UiPgogICAgICAgICAgICAgICAgICA8eG1wR0ltZzp3aWR0aD4yNTY8L3htcEdJbWc6d2lkdGg+CiAgICAgICAgICAgICAgICAgIDx4bXBHSW1nOmhlaWdodD4yNTY8L3htcEdJbWc6aGVpZ2h0PgogICAgICAgICAgICAgICAgICA8eG1wR0ltZzpmb3JtYXQ+SlBFRzwveG1wR0ltZzpmb3JtYXQ+CiAgICAgICAgICAgICAgICAgIDx4bXBHSW1nOmltYWdlPi85ai80QUFRU2taSlJnQUJBZ0VBU0FCSUFBRC83UUFzVUdodmRHOXphRzl3SURNdU1BQTRRa2xOQSswQUFBQUFBQkFBU0FBQUFBRUEmI3hBO0FRQklBQUFBQVFBQi8rNEFEa0ZrYjJKbEFHVEFBQUFBQWYvYkFJUUFCZ1FFQkFVRUJnVUZCZ2tHQlFZSkN3Z0dCZ2dMREFvS0N3b0smI3hBO0RCQU1EQXdNREF3UURBNFBFQThPREJNVEZCUVRFeHdiR3hzY0h4OGZIeDhmSHg4Zkh3RUhCd2NOREEwWUVCQVlHaFVSRlJvZkh4OGYmI3hBO0h4OGZIeDhmSHg4Zkh4OGZIeDhmSHg4Zkh4OGZIeDhmSHg4Zkh4OGZIeDhmSHg4Zkh4OGZIeDhmSHg4Zi84QUFFUWdCQUFFQUF3RVImI3hBO0FBSVJBUU1SQWYvRUFhSUFBQUFIQVFFQkFRRUFBQUFBQUFBQUFBUUZBd0lHQVFBSENBa0tDd0VBQWdJREFRRUJBUUVBQUFBQUFBQUEmI3hBO0FRQUNBd1FGQmdjSUNRb0xFQUFDQVFNREFnUUNCZ2NEQkFJR0FuTUJBZ01SQkFBRklSSXhRVkVHRTJFaWNZRVVNcEdoQnhXeFFpUEImI3hBO1V0SGhNeFppOENSeWd2RWxRelJUa3FLeVkzUENOVVFuazZPek5oZFVaSFREMHVJSUpvTUpDaGdaaEpSRlJxUzBWdE5WS0JyeTQvUEUmI3hBOzFPVDBaWFdGbGFXMXhkWGw5V1oyaHBhbXRzYlc1dlkzUjFkbmQ0ZVhwN2ZIMStmM09FaFlhSGlJbUtpNHlOam8rQ2s1U1ZscGVZbVomI3hBO3FibkoyZW41S2pwS1dtcDZpcHFxdXNyYTZ2b1JBQUlDQVFJREJRVUVCUVlFQ0FNRGJRRUFBaEVEQkNFU01VRUZVUk5oSWdaeGdaRXkmI3hBO29iSHdGTUhSNFNOQ0ZWSmljdkV6SkRSRGdoYVNVeVdpWTdMQ0IzUFNOZUpFZ3hkVWt3Z0pDaGdaSmpaRkdpZGtkRlUzOHFPend5Z3AmI3hBOzArUHpoSlNrdE1UVTVQUmxkWVdWcGJYRjFlWDFSbFptZG9hV3ByYkcxdWIyUjFkbmQ0ZVhwN2ZIMStmM09FaFlhSGlJbUtpNHlOam8mI3hBOytEbEpXV2w1aVptcHVjblo2ZmtxT2twYWFucUttcXE2eXRycSt2L2FBQXdEQVFBQ0VRTVJBRDhBNU5uVnZMdXhWMkt1eFYyS3V4VjImI3hBO0t1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMksmI3hBO3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3UmI3hBO3hWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXgmI3hBO1YyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYmI3hBOzJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjImI3hBO0t1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYzWEZVUkhwdW95T0VqdFpuYzlGV05pVDlBR0QmI3hBO2lEUGdsM0xaTEc5ajVHUzNrUUxYbHlSaFNuV3RSallRWUh1VWNMRjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMksmI3hBO3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWTy9MM2tuelo1amFtaTZWY1hxMTRtWkVwRUNlelN0eGpYNld5dkptaEQ2alRiand6bnlET1kmI3hBO3Z5SG4wNk5aL09IbVRUUEwwWkZmUmFRVFhGUEFKV05TZjlWam1LZGJmMFJNbkpHaXJlY2hGVlcwL3dDY2RORTQvV0x6VlBNc3kvM2kmI3hBO3dxWVlpZkFWK3JOVC9abkc5UkxrQkZOYWVQVXlWay9OcjhyZE1CWFJ2eTh0cGY1SmIxNDNZZS94eDNEZjhOZy9LNVpjNS9KUDVyRVAmI3hBO3Bnckovd0E1TWExYS9EcHZsM1RMT1BmNFFKT2hOUVBnTWY2c0I3T2llY2lVL3dBb25wRUtaLzV5ajgvVk5OUDBvRHNERmNrMC93Q2smI3hBO2pIK1RjZmVmeDhHUDhvejdoK1BpaTdYL0FKeW44MUtSOWEwZXhsRzFSRVpvajcvYWFYSW5zeUhRbG1PMFpkUW1zUDhBemtSNUUxWmcmI3hBO3ZtWHlpQ3JiTzRXM3ZSdjNJbFNIYklIUVpJL1RMOURNYStFdnFqK2xNcmZSL3dEbkcvenBTT3lhRFRiK1g3S0k3MkVvSi9aV09Ta0QmI3hBO0gvVlZzZ1o2bkh6M0h6WmlHbnljcXY1SkY1cS81eGQxR0JIbjhzYW10NG9xUlpYZ0VjdE93V1ZmZ1kvTlZIdmx1THRJSDZoVFZrN08mI3hBOy9tbjV2R05iMEhXZER2bXNOWHM1Ykc3VGN4VEtWSkhUa3A2TXZ1TnMyTUppUXNHM1h6eHlpYUlwQVpKZzdGWFlxN0ZYWXE3RlhZcTcmI3hBO0ZYWXE3RlhZcTdGWFlxN0ZYWXE3RlhZcTdGWFlxejd5dCtUSG12V0xVYXBxSmkwRFFRb2VUVTlSWVJEZ2Yya2pZcXhyWFl0eFUrT1kmI3hBO3VUVndpYUhxbDNCeThlam5MYytrZWFkZnBqOGxmSnRGMHV3azg1NnhIMXZiMzkxWksxUDJJaVBpRmV4US93Q3RsZkJteWN6d0Q3V3omI3hBO2p3NCtRNHlrbm1MODd2ekMxbERBbC84QW9xeHB4U3owMWZxNnF0S1U1Z21XbE8zT21XWTlIamowcytiVmsxbVNYV3Zjd1NTV1NXUnAmI3hBO0pYTHlNYXM3RWtrKzVPWlRqRTJ0eFE3RlhZcTdGWFlxN0ZYWXF6UHlYK2JubmJ5bThjZGxldGM2ZW5YVHJvbVdIajRKVThvLzlnUm0mI3hBO1BtMHNNbk1idVRpMVU0ZGJEM3ZRUE9uNWMvbTdwUjBiVnJSWXRUQ2x2cUU1SHFvZThsck1LRTlONlVQaUtacXA0Y21uUEVEdCtPYnMmI3hBOzRaY2VjVWVieFQ4MC93QW50WDhrM0J1NEMxOTVmbFlMRGZVSEtObTZSemdkRDROMFBzZHMyV20xWXlDdVVuWGFuU25IdU40dlBNeTMmI3hBO0VkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpckt2STM1YSthZk9WeVYwdUFSMlVScGM2alBWTGVQeCtLbnhOL2smI3hBO3JVL1JsR2JVUnhqZm0zNGRQTEp5NU01azFyOHJ2eTEvZGFEQkg1dDgyUmJQcXR3QWJPQndmOTFLQ1FTUDhnay81ZmJNYmd5NXZxOUUmI3hBO2U3cTVYSGl3L1Q2cFBPZk5Ybm56VDVxdXZYMXZVSkxrS2F4VzllRU1mK3BFdEZIenBYeHpMeFlZd0hwRGg1YzhwOHlrV1d0VHNWZGkmI3hBO3JzVmRpcnNWZGlyc1ZkaXJzVmRpcXBiWFZ6YTNFZHpheXZCY1FzSGhtallvNk9wcUdWaFFnZzRDQWRpa0VnMkgxRitVbjVtMkg1Z2EmI3hBO0pjZVdmTXFSeTZzc0pTZU53QWw1YjA0czRBcFJ4KzBCL3JEMjB1cTA1eFM0bzh2dWQxcHRRTXNlR1hQNzNodjVyL2wzY2VTUE1yV2kmI3hBOzhwTkt1d1p0TXVHNm1PdThiSCtlTTdINkQzelphWFVESkcrdlYxdXF3ZUhMeUxDOHlYR2RpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1YmI3hBO2RpcnNWZDF4VjY5NU0vSjNUOVAwbi9GdjVqekhTOUVpbzBPbXNTczg1SXFvY0Q0MTVka1g0ei9rOThETnF5VHdZOTVkN3NNT2tBSEgmI3hBO2sySGNrMzVnZm5EcU92VzM2RDBHRWFINVVoSHB3NmZBQWpTSU9ucWxOcUhyd1hieDVkY3N3YVFSUEZMMVNhOCtyTXZUSGFMenJNdHcmI3hBOzNZcTdGWFlxN0ZYWXE3RlhZcTdGWFlxN0ZYWXE3RlhZcWp0QzFyVU5EMWkwMWZUNVBUdkxLUlpZVzdWSFZXSGRXR3hIaGtad0VnUWUmI3hBO1Jad21ZeUJIUjlTZm1YcGxoK1lQNVJqV2JKS3p4VzY2cFk5MlZrU3MwUnAzNDhscC9NQm1rMDhqaXpjSjl6dXRSRVpjVmozdmszTjYmI3hBOzZKMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLcm9vcFpaVWlpUnBKWkdDeHhxQ3pNekdnQUEzSkp4VUMzdm5rL3lGNWEvTFBRNHYmI3hBO09ubnVrbXNHaDA3U3hSekhJZDFDcWRubUhVbjdLZlBmTlZsenl6UzRNZkxxWGE0c01jTWVPZk41VitZSDVpYTc1MjFmNjdxTGVuYXgmI3hBO1ZXeXNFSjlLRkNmK0djL3RNZXZ5b016c0dDT01VSEJ6NmlXUTc4bUxaZTBPeFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYmI3hBOzJLdXhWOVZmODQxNm8xOStYTDJVeDVqVDd5YTNWRzNIcHlLc3cramxLMmFQdENOWkw3dzd2UVN2SFhjK1pmTVdtL292ekJxZW1mOEEmI3hBO0xEZHoyM2ovQUhNakoyLzFjM1dPWEZFSHZEcDhrYWtSM0ZMOGt3ZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJ1dUt2b2I4dWZJbWkvbDEmI3hBOzVhZno3NTBRTHFhcHlzTE54VjRlWStCRlFqL2VpVC9oUjRmRlRVNmpQTE5MdzRjdng5anRzR0FZbzhjK2Y0KzE0NTU4ODlheDV6MTYmI3hBO1hWTlJiaEdLcFoyYWttT0NMc2krNTZzM2M1c01HRVk0MEhYNTh4eVNzc2N5NXBkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyNm4mI3hBOy9JSDh2ZEIwL3dBbzJYbUthM2p1ZFkxSUdiNnhJb1l3eGh5cUpGWDdPeTFZamV2eUdhUFhaNUdaajBEdTlIZ2pHQWwxTEJmK2NvdFAmI3hBOzBPMjE3UjVyU0tPTFU3cUNaOVFFWUNsMFZsRUxzQjFKUHFDcDhQYk1yczJVakUzeWNidEVBRWQ3eExOazYxMkt1eFY5SmY4QU9Ld2smI3hBOy93QVBhNHhyNlp1NHd2aHlFWHhmckdhZnRQNmc3anM3NlQ3M2lINWtzamZtRjVsS0x4SDZVdkFSN2lkZ1Q5SnpaYWYrN2o3ZzYzVUgmI3hBOzk1TDNzY3k1cGRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyMnovbkgvOEFMT0c4bFBuWFhVQ2FWWUZtMDlKZGtlU0w3VTdWMjRSVTIveXYmI3hBOzlYTmJydFJYb2p6THN0RHA3OWN1WFJpUDV3L21WY2VkZk1UZlYyWk5Dc0dhUFRvZHh6N05Pdy9tZW0zZ3RCNDVrYVRUK0hIK2tYSDEmI3hBO2VvOFNXMzBoZ09aVGl1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMktzKzhuL0FKMitlUEttai9vaXdrdDdpeFRsOVdTNmpMbUgmI3hBO21lUjlNcXlkeldqVkdZdVhSd21iUE55c1dzbkFVR0k2L3IrcjYvcXMrcTZ0Y3RkWDF3YXlTdFFiRFlLcWlnVlFPZ0daRUlDSW9jbWomI3hBO0prTXpaUy9KTUhZcTdGWDFSL3pqdGFSNlIrVjB1cVhYN3VLNnVibTlhUWpmMG9WV0luNUQwV3pSNjg4V1dnN3ZReDRjZDk3NWcxTysmI3hBO2sxRFVydS9sL3ZMdWFTZC85YVJ5NS9YbTdpS0ZPbW5LeVQzb2JDeGRpcnNWZGlyc1ZkaXJzVmRpcnNWWkQ1QThuM2ZtN3pWWmFKYmsmI3hBO29rcmM3dWNDdnBRSnZJLzNiTC9sRURLcytVWTRtVGRneGVKSUI3Yi9BTTVBK2E3WHkxNVhzUEl1aDB0eGRRcUxoSTlqSFpSL0NpZVAmI3hBOzcxbE5mRUExNjVyZERpTTVISkw4RjJPdHlpRVJBZGZ1Zk9PYmQxREpmSS81ZStaZk9lb0cxMGVEOTFHUjlhdlphckJDRDA1dFE3bnMmI3hBO29xVGxPYlBIR0xMZGh3U3lIWjZacW5rSDhtZnk5RU1QbSs3dTllMWlSUTdhZmEvdTFDbm8zQkhqS2p3NVM3K0dZVWMrYkw5QUVRNXMmI3hBO3NHSEY5ZTVaejVSL0wvOEFKSHpuNWVYVk5JMFBqYk83eFNLOGs4YzhVcWdWVnVNckNvQkJGR0kzekd5NTgrT1ZFdVRqdzRja2JBZUgmI3hBO2ZtVCtXdDM1YjgxNnBwK2xSVFhlbDJVRWQ2WnlPUml0NWZoSHFzQUJzOVZIam16MCtvRTRBbm1YVzZqVG1NaUJ5NXNHekpjVjdCcFAmI3hBOzVIYUJwN1diZWVmTk5wcGsxNFU5SFRMYVNONW1XVHBXVnFxditzRVpmOHJOZkxXU044RVNmTjJFZEZFVnh5cDdKcEg1RmZsaHBxS0ImI3hBO3BBdkpSMW11NUhsSitha2lQN2x6WHkxdVU5YWMrT2t4am8rWmZ6QTBlR1A4eDlZMG5SYlg0QmZOQloyZHVwUHhFMEVhS1A4QUsyb00mI3hBOzNPQ2Y3c0dYYzZqUEQ5NFJFUGJQeTgvNXh4MFN6czRyN3pjcHY5U2tVTWRQVnl0dkRYOWxpaEJrWWQ5K1BzZXVhM1AyaEltb2JCMkcmI3hBO0RReEF1VzVUL3dBOWZrYjVMMVh5OWRKbyttUmFkcThNVFBZeld3S2NwRkZWamRRZUxCenRVN2pLc090bkdXNXNOdWJTUWxIWVVYeVYmI3hBO20rZEU3RldmYVg1RzhpMnVtMk9vK2FmTjBNQnZZa21YVE5Nak4zY3FyZ01CSzRxc1RnSGRXWHJtTExOTWtpTWVYVTdPWEhCQUFHY3UmI3hBO2ZRUG9IeXArUzM1VzJOcmIzMXBweTZvSmtXV0c2dm1NL05IQVpXOU5nc1c0TmZzWnFjdXN5azBUWHVkcGowdU1iZ1crZlB6eDA3VE4mI3hBO08vTXpWclRUYmVPMXQwRnV4Z2hVSWl1OXVqdFJSUUN2S3UyYmJSU0p4QWwxV3NpQmtOTUR6S2NWMktxdHJhM0YzZFEydHVobHVMaDEmI3hBO2loalVWWm5jaFZVRHhKT0FtaGFRTE5COVAvbW5ld2VRL3dBbWJmeTVieUFYZDFCSHBjUlEwNUFyVzZrcDRNdklIM1lacGRNUEZ6Y1ImI3hBOzVjLzFPNjFNdkR4Y1B3ZkxlYnQwanNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZmVFgvT05mbGUzMHJ5amQrYUxzQkpkVFpoSEsyM0MxdGkmI3hBO1FUWHR5a0RFL0lacHUwTW5GTVFIUjNPZ3g4TU9MdmVCZWVmTTgvbWZ6WnFXdHlrOGJxWS9WMFA3RUtmREV2MElCWDN6YVljZkJBUmQmI3hBO1hueWNjeVcvSS9sSFVQTnZtVzAwU3krRnB6eW5uSXFJb1Uza2tQeUhUeE5Cam15akhFeUs0Y1J5U29QcmU2SGw3OHRQeS91WmJHM1cmI3hBO0t4MHVBdXFmdFRUdFJWTHQzYVNRcUNmNEROQ09MTmszNWwzcDRjVU51UWZHdXI2dGY2dnFkenFlb1NtZTl1NUdsbmxidXplSGdCMEEmI3hBOzdET2hqRVJGRGs4L09aa2JMNmEvSUMzZnl6K1dWM2Y2L3dEN2pMV2E4bHZWa3V2M1E5QXd3b3IvQUJVMllvZVBqdFROTnJqeDVRSTcmI3hBOzdPNDBVZURIY3R0M25INXZmbmczbVZMalEvTDhmb2FISVF0M2RPb0UxMXdOVjJQMkl3UlVmdEgyNlptYVhSOEhxbDlYM09McXRaeGUmI3hBO21QSjVEbWU2OUhhUkZOZTYzWXdsaTh0eGNReGhpYWtsbkNqcmtaYlJMWkRlUTk3NzB6bG5wSHpqcEV0aDVWaDh4Zm1ycXNTejZucWQmI3hBOy9keGVWclNUOXBwSlg1VFVxZmg2aW9QMlFhZmFHYmlZTStIRU9RQTRuVnhySHhaVHpKTk1EOG0rYWZNdXMvbXJvR3BYdW9UVDMwK3AmI3hBO1c2U1NNNUg3cVNWUkpHbyt5cUZDUnhHMlpXYkhHT0lnRGFuRnhaWnl5Z2s5WDJTN29pTTdrS2lnbG1QUUFiazV6cnZud0ROSUpKcEomI3hBO0F2RU94WUw0Vk5hWjFZZVlKczJzeFEyaU03cWlpck1RRkhpVHRpa0MzM3pwOW5IWldGdFp4Z0NPMmlTRkFPbkdOUW9wOTJjckkyYmUmI3hBO21Bb1BqTDgycjAzdjVsZVlwaWE4YjJTQ3YvR0Q5ei94cG5SNlVWamo3blFhbzNrTEVzdmNkMkt2WGY4QW5IUHlRZFg4ME41aXUwLzMmI3hBO0c2SDhVWmI3TDNURDRCL3p6SHhud1BITUR0RE53eDRSems1K2d3M0xpUElKRCtkZm4xZk4zbkNSclYrV2thYURhNmZRL0M5RCs4bUgmI3hBOy9HUmh0L2tnWmJvOEhodzM1bHIxbWJqbnR5REFNeW5FZGlyc1ZkaXJzVmRpcnNWZGlyc1ZiVldaZ3FnbGlhQURja25GWDF0K1lUTDUmI3hBO04vSkNmVDRDSTVZckdIVEVwKzA4M0dHVWozS3M3Wm9jSDd6UGZuYnZzLzd2Q1FPNm55Um0rZEMrbFA4QW5GN3l6RmI2QnFQbUtWUDkmI3hBO0l2cHZxc0RFYmlHRUF0US81Y2piL3dDcU0wL2FXUzVDUGM3anMvSFVUTHZUYi9uSVcwMTdXTkcwZnkxb2xySmQzZXAzWmxkSXgvdXUmI3hBOzJUZm14K0ZVNVNxU1dOTnNyMEJqRW1VanlEWnJZeWxFUmoxTENiUHl4K1h2NVR3UjZqNXJsajE3emZRU1d1ancwYU9GcVZWaUcvNG0mI3hBOzQvMVZKRmN5VGt5WjlvZW1IZTQ4Y2VQQUxsdko1dDU5L012elA1MXZmVjFPYjA3S01rMjJuUlZFTWZ2VDl0djhwdC9rTnN6TUduamomI3hBO0czTndzK29sa08vSmltWHREc1ZaVitWVmtiMzh4L0xrSUZlTjlETVI3UU42cC80aGxHcE5ZNWU1djBzYnlSOTc3WXptM29YeUQrZC8mI3hBO21XTFVmTlM2SFlNUm8zbHVNYWRaeFYyOVNNQlpuK2ZKZU5mQlJuUWFQSFVlSTg1YnVqMXVTNWNJNVJRdjVINmY5ZS9OSFFveVBoaGsmI3hBO2t1R1BoNk1MeUwvd3lqSmF5VllpeDBjYnloOVkrY0x6Nmw1UzF1OEI0bTJzTHFVSHdLUXMzYjVab2NJdVlIbUhkNURVU2ZKOEtaMDcmI3hBO3pUc1ZUbnlYWS9YL0FEaG9kbDJ1TCsyamIvVmFaUVQ5QXl2TktvRStUYmhGekE4MzNUbk1QUnZnclhiMzYvcmVvWDFhL1dybWFldmomI3hBOzZraGIrT2RUQVVBSG1zaHVSUG1nc2t3VGp5bjVXMWJ6UnJ0dG8ybHg4N2ljL0U1cndqakgycEhJNkt2OW5YSzh1VVFqeEZzeFlqT1YmI3hBO0I3SithWG12U1BJZmxLTDh0L0swbitsdEZ4MWU3WFp3c2dxL0lqL2RrM2YrVmR2Q212MDJJNVorSkw0T3gxT1VZb2VISG04RHphT3EmI3hBO2RpcnNWZGlyc1ZkaXJzVmRpcnNWZGlxZGVTYlJMenpub05vNHJIY2FqYVJQMytGNTBCL0E1WG1OUUo4aTI0UmN4N3craVA4QW5LQzQmI3hBOzlQeURZd2hxTk5xY1FLK0tyQk1UL3dBTnh6VWRtajk0ZmM3WHRBL3UvaStYYzNicFgyTitSVVNSL2xWb0lRVTVKTzU5eTF6S1RuUGEmI3hBOzAvdlM5QnBCV01KUitmdjVoYS81UjBXd2kwVXBEY2FvMDBiM2hISjRsakNuOTJEOFBKdWZVMXA4OThzME9DT1NSNHVqWHJNOHNjUlgmI3hBO1Y4cVhOemMzVnhKYzNNcnozRXpGNVpwR0xPekhjbG1OU1NjM2dGYkIwaEpKc3FlRkRzVmRpcjA3L25IT3dhNi9NKzFuQXFMRzJ1YmcmI3hBO253REo2RmYrUzJZWGFFcXhIemMzUVJ2SjdnK29mTkdzRFJ2TG1xYXNhVnNMV2E0VU4wTFJvV1VmU3dBelNZb2NVZ084dTVuTGhpVDMmI3hBO1BoS2FXV2FWNXBXTHl5TVhrYzdrc3hxU2ZtYzZnQjVvbTkzcjMvT01HbmlmejFlM2pDb3M3QitCMjJlV1JGSC9BQXZMTmYybEtzWUgmI3hBO2VYUDdPajZ5Zko3YitkRjRiVDhyL01Fb05PVnVzUDhBeVBsU0x3UDgrYTNSaThzWFk2bzFqaytNczZKNTUyS3M0L0pHeCt1L21qb00mI3hBO2RObzVaSnlmRDBZWGtINHFNeHRaS3NSY3JSaThvZlhQbVcrK29lWGRWdnE4ZnFsbmNUMTZVOU9KbThSNGVPYURHTGtCNXU4bWFCTDQmI3hBO096cUhtVTA4dGVXTmE4eTZ0RnBXajJ6WEYxS2Q2ZllSYTBMeU4wVlJYYzVESmtqQVdXekhpbE0wSHIrcGVZdkwvd0NVT2d6ZVhmTGsmI3hBO3NXcGVkYnNVMWJVd3RVdHpUN0E5MC9aU3ZYNG0vbHpYeHh5MUV1S1cwT2djK1dTT0NQREhlZlY0ZlBQUGNUeVR6eU5MUEt4ZVdWeVcmI3hBO1ptWTFMTVR1U1RtekFwMXBON2xaaWgyS3V4VjJLdXhWMkt1eFYyS3V4VjJLc2cvTHk0RnY1OTh1VE1RRlhVN1RtVDJVenFHUDNIS3MmI3hBOzR2SEwzRnUwNXJKSDN2b2ovbkp1MGxuL0FDNmdsUUVyYTZqQkxKUVZvcGpsaTMvMlVnelVkbkg5NThIYTlvUnZIN2krVjgzanBIMWImI3hBOy93QTQzZVlJZFEvTDVkTTVnM09qenlReUpXcmVuTXhtamI1RXN5ai9BRmMwWGFHT3NsOTd1OURPOGRkeU4vUG55VmUrYVBKUk9uUkcmI3hBO2ZVdExsRjFCQ2dxOGljU3NxS081NG5rQjFQR2d5T2h6Q0U5K1JaNnpFWncyNWg4ak1yS3hWZ1F3TkNEc1FSbS9kQ3ozOHY4QThuZk0mI3hBO1htb2krdWdkSjh1eGoxTGpWTGtjQVkxM1l3aHFjdGg5cjdJN250bUxuMWNZYkRlWGM1ZURTU251ZG9wSDUvaDhuUWVacmlEeWkwc20mI3hBO2p3cWtTeXl0eTV5b09Nam94M0tzUlg1MXB0VExjQm1ZK3ZtMVp4QVM5SEpqdVd0TDNQOEE1eFYwOHZybXU2alRhM3RZcmV2L0FCbmsmI3hBO0wvOEFNak5aMm5MMGdlYnN1elJ1UzlLLzV5QTFMNmwrVitwb0RSNzE0TFpEV24ycFZkdnZSR0dZZWhqZVVlVG1heVZZeStRczM3b1gmI3hBOzBGL3ppbGJKeDh5M1IzZXRwRXZYWWZ2bVAzN1pxdTB6OUk5N3RlelJ0SXZRUHowMGZXdFgvTHk2c2RJdFh2TG1TZTNMVzhRTE9VV1EmI3hBO0VsVkhXaHBYMnpFMFU0eHlXZG5LMWNETEdRSHpyNW0vS1B6RDVZOHJSNjVyczl0Wnp6U3BIRHBSa0RYREt3SkxiSGo4TzFRcFB2VE4mI3hBO3ZqMVVaeTRZL04xV1RTeWhEaWw4bUQ1a3VLOVkvd0NjYUxENnorWXpYQkcxbFl6ekErN01rWGdkNlNITUh0R1ZZL2VYTzdQSDd6NFAmI3hBO292ejlwbXA2cjVLMXZUZE1ISy91N09XR0JDUXZNdXBCU3BJQTVENGR6VHh6VDRKQ013VHl0MjJhSk1DQnpwODQ2UitRZXIyOXFkVjgmI3hBOzdhaGIrV3RIaW9aVEpJa2s3Q2xRcWhTVUROMitJdC9rbk54TFhBbW9EaUxxWWFFZ1hNOElXNjUrYTJrYUZwY3Zsejh0YlZ0TXNIK0cmI3hBOzgxeVQvZTI1SUZPUVk3b090RDFIWUpqRFRHUjRzbTU3dWl6MVFpT0hIc085NWF6TXpGbUpMRTFKTzVKT1p6Z3RZcTdGWFlxN0ZYWXEmI3hBOzdGWFlxN0ZYWXE3RlhZcXZnbmtnbmpuaVBHU0psZEQ0TXBxTVNMU0RSdDlvNjdaV3ZuLzhzNW9yY2pqclZpazlxU2RsbUlXV0lOL3EmI3hBO3lLQTJjNUFuRmwzNkY2R1lHVEg3dytMcmlDYTNua3Q1ME1jOExOSExHd295dXBveWtlSUl6b3diZWVJbzBVODhrK2Q5YzhuYTB1cWEmI3hBO1RJT1JIQzR0NUttS2FQcndjQWo1Z2pjWlZtd3h5Um90bUhOTEdiRDN6U3YrY292Sjgxc3AxUFRiMjB1cWZHa0lqbmpyL2t1WGliNzEmI3hBO3pWUzdObmV4RHRJOW9RUE1FSlZydjUvL0FKWXRLMTVZK1ZUcU9wTWVSbnU0TGFINHV4TXY3K1FuNk1zaG9jdkl5b2ZGalBYWStnc3YmI3hBO01QUGY1d2VjZk9LdGJYazYybWxrMUduV3RVamFsQ1BVSkphVHArMGFlQUdadURTUXg4dWJnNXRYUEp0eURDTXlYR2Rpck9QeTYvTm4mI3hBO1dmSWx2ZXc2YlpXdHo5ZWRIbGU0RWhJOU1FS0J3ZFA1am1OcU5MSExWbms1V0RWSEdDQUVUK1lQNTBlWXZPMmpRNlRmMmxyYTI4VncmI3hBO3R6eXRoSUdaa1JrQWJtN0NuN3duSTROSEhHYkJUbjFaeVJvaW5uMlpiaVBRL3dBcFB6WlBrRnRTU1RUL0FOSVcrb0NJOFZrOUprZUgmI3hBO2tBYWxYcUNITmN4TlZwZkZyZXFjdlM2bndyc1hhZjhBbUQvbkp6emxmSThXajJkdHBDTjBsTmJtWmZremhZLytTZVZZK3pvRG1iYlomI3hBOzlvU1BJVThxMWZXOVgxbTlhKzFXOG12cnQ5ak5PNWRxZUFyMEE3QWJablFnSWlnS2NLYzVTTmsyZ3Nrd1pWK1cvbisrOGorWXYwdGImI3hBO1FMZHhTeE5iM1ZxekZPY2JNcmJOUnVMQmtGRFE1UnFNQXl4b3QrbnpuSEszcFd0Lzg1VDZ2TkNZOUcwU0d6a0lwNjl6SzF4U3ZjSXEmI3hBO3dqYjNKekRoMllCOVJ0eko5b24rRVBJdk12bTd6SjVtdlBybXVYOHQ3TUtpTU9RRVFIc2thZ0lnL3dCVVpuNDhVWUNvaW5BeVpaVE4mI3hBO3lLVVpZMXV4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjlHLzhBT05IbjJLZlQ1dko5N0tCYzJwYTQwdmtmdHdzZVVzWXImI3hBOzNSanlwNEUrR2FqdEhCUjR4OFhiNkROWTREMFkvd0Q4NUYvbHJKcCtwdDV2MDJJbXd2bUExTkZIOTFjSFlTZjZzdmYvQUN2OVlaYm8mI3hBO05SWTREekhKcTEybm84WStMeExOazYxMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3UmI3hBO3hWMkt1eFYyS3V4VjJLdXhWMktvclM5VHY5SzFHMzFIVDVtdDcyMWNTd1RKMVZsK2V4OXdjRW9pUW84bVVaR0pzYzMxdCtYUDVrK1gmI3hBO3Z6RzBHWFQ3Nk9KTlVNUmkxVFNuTlZrUmh4YVNJSGRvMnJ2M1hvZXhPZzFHbmxobFk1ZEM3M0JuamxqWFhxSGlmNXIvQUpINnI1V20mI3hBO20xVFJra3Z2THBKZGlBV2x0UjE0eUFWTElPei9BSCtKMldsMWduc2RwT3UxT2pNTjQ3eGVWNW5PQzdGWFlxN0ZYWXE3RlhZcTdGWFkmI3hBO3E3RlhZcTdGWFlxN0ZYWXE3RlhZcTdGWFlxN0ZYWXE3RlhZcTdGWFlxN0ZYWXE3RlhZcTdGVVJZYWhmYWRlUlh0alBKYlhjREI0WjQmI3hBO21LT3JEdUNNRW9naWl5akl4Tmg5QWZsOS93QTVLV3NzY2VuK2M0L1JtQTRqVm9VckczYjk5RW9xcDhTZ3A3RE5WbjdQUE9IeWRwZzEmI3hBOzRPMC9tbi9tVDhrZnk3ODYyeDFmeTVjeFdFOC94QzdzQ3MxcTdIYzg0UVFvTy83QlgzeW5Ick1tTTFMZjN0dVRTWThtNDI5enlEekYmI3hBOy93QTQvd0Q1ajZPenRCWkpxMXN2U2F4Y08xUCtNVDhKYS9KVG13eDY3SExyWHZjQ2VoeVI1YnNCMURTZFUwNlV3NmhaejJjeW1oanUmI3hBO0kzaVlId280QnpMaklIa1hGbEFqbUtRdUZpN0ZYWXF1ampra2NKR3BkejBWUVNUOUF4U0JiSWRLL0xmejdxdERZNkRleUkzU1ZvV2omI3hBO2pQOEF6MGtDSitPVXkxR09QTWh0anA4a3VRS2I2citVV3VhSHAwMTU1aTFMVE5IbWpqTWtXblQzSWt1NVRTb1ZJNEJMV3ZTdGFaQ08mI3hBO3FqSTFFRXRrdElZaTVFQmd1WkxpdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3V4VjJLdXhWMkt1eFYyS3AmI3hBO2pvbm1QWHRDdWZyV2ozODloUDhBdE5BN0lHSGd3R3pEMkl5RThjWkNpTFp3eVNqeU5QVE5DLzV5Wjg4MklWTlVndGRXakhWMlF3VEgmI3hBOy9aUmZCL3lUekRuMmRqUEt3NWtPMEpqbUxaclovd0RPVW5sZTRpNGFyb1YzRXJENDBoYUc1WC9rb1lLNzVqSHMyUTVFT1FPMFlkUVYmI3hBO3IvbkIrUWw0OWJ2eTZqSHJ5bjB5MWZmcDJMNC9sTTQ1UyswcE9xd0htUHNRRngrWlAvT09na2R4NVc5UTFyKzdzTGRRVDdBeUlCa3gmI3hBO3A5Ui9PKzFnYytuL0FKdjJJUzUvT3o4cExZc2RMOGcyN25zWkxheXR5ZkN2Qkpza05IbFBPZjNvL09ZaHlqOXlXWGYvQURrcnJrU1AmI3hBO0hvT2c2ZHBVYmJENFdsWUN0ZjJQUlg3MXlZN1BqL0VTV3M5b0hvQUdHNjUrY0g1a2F6eVc2MXk0aWliYjBiVWkyV2g3SDBRaFlmNngmI3hBO09aRU5Mamp5RGp6MWVTWFZoN3U3dVhkaXpzYXN6R3BKUGNrNWtPT1MxaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmQmI3hBO2lyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGkmI3hBO3JzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXImI3hBO3NWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnMmI3hBO1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1YmI3hBO2RpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcjBQeWQrZEdyZVZ0QmgwYTIwalRydUtGbmNUM01idElmVVlzUVNyS05xN1omI3hBO2laZElKeXV5SE13Nnd3ancwRTcvQU9oa3RmOEErcGYwai9rVkovMVV5djhBaytQODZUWi9LQi9taDMvUXlXdi9BUFV2NlIveUtrLzYmI3hBO3FZL3lmSCtkSmY1UVA4ME8vd0Noa3RmL0FPcGYwai9rVkovMVV4L2srUDhBT2t2OG9IK2FIZjhBUXlXdi93RFV2NlIveUtrLzZxWS8mI3hBO3lmSCtkSmY1UVA4QU5Editoa3RmL3dDcGYwai9BSkZTZjlWTWY1UGovT2t2OG9IK2FIZjlESmEvL3dCUy9wSC9BQ0trL3dDcW1QOEEmI3hBO0o4ZjUwbC9sQS96UTcvb1pMWC8rcGYwai9rVkovd0JWTWY1UGovT2t2OG9IK2FIZjlESmEvd0Q5Uy9wSC9JcVQvcXBqL0o4ZjUwbC8mI3hBO2xBL3pRNy9vWkxYL0FQcVg5SS81RlNmOVZNZjVQai9Pa3Y4QUtCL21oMy9ReVd2L0FQVXY2Ui95S2svNnFZL3lmSCtkSmY1UVA4ME8mI3hBOy93Q2hrdGYvQU9wZjBqL2tWSi8xVXgvaytQOEFPa3Y4b0grYUhmOEFReVd2L3dEVXY2Ui95S2svNnFZL3lmSCtkSmY1UVA4QU5EdismI3hBO2hrdGYvd0NwZjBqL0FKRlNmOVZNZjVQai9Pa3Y4b0grYUhmOURKYS8vd0JTL3BIL0FDS2svd0NxbVA4QUo4ZjUwbC9sQS96UTcvb1omI3hBO0xYLytwZjBqL2tWSi93QlZNZjVQai9Pa3Y4b0grYUhmOURKYS93RDlTL3BIL0lxVC9xcGovSjhmNTBsL2xBL3pRNy9vWkxYL0FQcVgmI3hBOzlJLzVGU2Y5Vk1mNVBqL09rdjhBS0IvbWgzL1F5V3YvQVBVdjZSL3lLay82cVkveWZIK2RKZjVRUDgwSlY1cC9QSFdQTVdnWGVqVDYmI3hBO05wdHRGZUtxdlBieHVzcThYRC9DUzVIN09UeDZNUWtEWllaTmFaUklvYnZOc3pIQ2RpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXImI3hBO3NWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnMmI3hBO1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1YmI3hBO2RpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmQmI3hBO2lyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGlyc1ZkaXJzVmRpcnNWZGkmI3hBO3IvL1o8L3htcEdJbWc6aW1hZ2U+CiAgICAgICAgICAgICAgIDwvcmRmOmxpPgogICAgICAgICAgICA8L3JkZjpBbHQ+CiAgICAgICAgIDwveG1wOlRodW1ibmFpbHM+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIKICAgICAgICAgICAgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiCiAgICAgICAgICAgIHhtbG5zOnN0RXZ0PSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VFdmVudCMiPgogICAgICAgICA8eG1wTU06SW5zdGFuY2VJRD54bXAuaWlkOkI0OTMxNjgwMUY5MUU2MTE4MzVBOEFBNzlBMUI4MEFCPC94bXBNTTpJbnN0YW5jZUlEPgogICAgICAgICA8eG1wTU06RG9jdW1lbnRJRD54bXAuZGlkOkI0OTMxNjgwMUY5MUU2MTE4MzVBOEFBNzlBMUI4MEFCPC94bXBNTTpEb2N1bWVudElEPgogICAgICAgICA8eG1wTU06T3JpZ2luYWxEb2N1bWVudElEPnV1aWQ6NUQyMDg5MjQ5M0JGREIxMTkxNEE4NTkwRDMxNTA4Qzg8L3htcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD4KICAgICAgICAgPHhtcE1NOlJlbmRpdGlvbkNsYXNzPnByb29mOnBkZjwveG1wTU06UmVuZGl0aW9uQ2xhc3M+CiAgICAgICAgIDx4bXBNTTpEZXJpdmVkRnJvbSByZGY6cGFyc2VUeXBlPSJSZXNvdXJjZSI+CiAgICAgICAgICAgIDxzdFJlZjppbnN0YW5jZUlEPnhtcC5paWQ6QjM5MzE2ODAxRjkxRTYxMTgzNUE4QUE3OUExQjgwQUI8L3N0UmVmOmluc3RhbmNlSUQ+CiAgICAgICAgICAgIDxzdFJlZjpkb2N1bWVudElEPnhtcC5kaWQ6QjM5MzE2ODAxRjkxRTYxMTgzNUE4QUE3OUExQjgwQUI8L3N0UmVmOmRvY3VtZW50SUQ+CiAgICAgICAgICAgIDxzdFJlZjpvcmlnaW5hbERvY3VtZW50SUQ+dXVpZDo1RDIwODkyNDkzQkZEQjExOTE0QTg1OTBEMzE1MDhDODwvc3RSZWY6b3JpZ2luYWxEb2N1bWVudElEPgogICAgICAgICAgICA8c3RSZWY6cmVuZGl0aW9uQ2xhc3M+cHJvb2Y6cGRmPC9zdFJlZjpyZW5kaXRpb25DbGFzcz4KICAgICAgICAgPC94bXBNTTpEZXJpdmVkRnJvbT4KICAgICAgICAgPHhtcE1NOkhpc3Rvcnk+CiAgICAgICAgICAgIDxyZGY6U2VxPgogICAgICAgICAgICAgICA8cmRmOmxpIHJkZjpwYXJzZVR5cGU9IlJlc291cmNlIj4KICAgICAgICAgICAgICAgICAgPHN0RXZ0OmFjdGlvbj5zYXZlZDwvc3RFdnQ6YWN0aW9uPgogICAgICAgICAgICAgICAgICA8c3RFdnQ6aW5zdGFuY2VJRD54bXAuaWlkOkIzOTMxNjgwMUY5MUU2MTE4MzVBOEFBNzlBMUI4MEFCPC9zdEV2dDppbnN0YW5jZUlEPgogICAgICAgICAgICAgICAgICA8c3RFdnQ6d2hlbj4yMDE2LTEwLTEzVDEwOjM1OjE4KzAyOjAwPC9zdEV2dDp3aGVuPgogICAgICAgICAgICAgICAgICA8c3RFdnQ6c29mdHdhcmVBZ2VudD5BZG9iZSBJbGx1c3RyYXRvciBDUzYgKFdpbmRvd3MpPC9zdEV2dDpzb2Z0d2FyZUFnZW50PgogICAgICAgICAgICAgICAgICA8c3RFdnQ6Y2hhbmdlZD4vPC9zdEV2dDpjaGFuZ2VkPgogICAgICAgICAgICAgICA8L3JkZjpsaT4KICAgICAgICAgICAgICAgPHJkZjpsaSByZGY6cGFyc2VUeXBlPSJSZXNvdXJjZSI+CiAgICAgICAgICAgICAgICAgIDxzdEV2dDphY3Rpb24+c2F2ZWQ8L3N0RXZ0OmFjdGlvbj4KICAgICAgICAgICAgICAgICAgPHN0RXZ0Omluc3RhbmNlSUQ+eG1wLmlpZDpCNDkzMTY4MDFGOTFFNjExODM1QThBQTc5QTFCODBBQjwvc3RFdnQ6aW5zdGFuY2VJRD4KICAgICAgICAgICAgICAgICAgPHN0RXZ0OndoZW4+MjAxNi0xMC0xM1QxMDozNTo0NCswMjowMDwvc3RFdnQ6d2hlbj4KICAgICAgICAgICAgICAgICAgPHN0RXZ0OnNvZnR3YXJlQWdlbnQ+QWRvYmUgSWxsdXN0cmF0b3IgQ1M2IChXaW5kb3dzKTwvc3RFdnQ6c29mdHdhcmVBZ2VudD4KICAgICAgICAgICAgICAgICAgPHN0RXZ0OmNoYW5nZWQ+Lzwvc3RFdnQ6Y2hhbmdlZD4KICAgICAgICAgICAgICAgPC9yZGY6bGk+CiAgICAgICAgICAgIDwvcmRmOlNlcT4KICAgICAgICAgPC94bXBNTTpIaXN0b3J5PgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6aWxsdXN0cmF0b3I9Imh0dHA6Ly9ucy5hZG9iZS5jb20vaWxsdXN0cmF0b3IvMS4wLyI+CiAgICAgICAgIDxpbGx1c3RyYXRvcjpTdGFydHVwUHJvZmlsZT5QcmludDwvaWxsdXN0cmF0b3I6U3RhcnR1cFByb2ZpbGU+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczpwZGY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vcGRmLzEuMy8iPgogICAgICAgICA8cGRmOlByb2R1Y2VyPkFkb2JlIFBERiBsaWJyYXJ5IDEwLjAxPC9wZGY6UHJvZHVjZXI+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgCjw/eHBhY2tldCBlbmQ9InciPz7/7gAOQWRvYmUAZMAAAAAB/9sAhAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAgICAgIDAwMDAwMDAwMDAQEBAQEBAQIBAQICAgECAgMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwP/wAARCADIAMcDAREAAhEBAxEB/8QAwQABAAICAwEBAQAAAAAAAAAAAAcKCAkFBgsDBAIBAQADAQEBAQEBAAAAAAAAAAAFBwgGBAMCAQkQAAAGAgECAwQJAwQBBQAAAAECAwQFBgAHCBEJEhNYIdaXGCIU1TZ3t5gZCjEVF0EyIxYkUWE1VxoRAAEDAwEDBwYKBwYDBwUA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" alt="ENI Logo" style="height:64px;width:auto;border-radius:8px;flex-shrink:0;" />
+      <div>
+        <h1>🔧 Terraform <span>Toolbox</span></h1>
+        <p>$ infrastructure-as-code --provider azure --lang hcl</p>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge badge-blue">Terraform ≥ 1.5</span>
+      <span class="badge badge-green">Azure / AzureRM</span>
+      <span class="badge badge-purple">HCL</span>
+    </div>
+  </div>
+</header>
+
+<div style="height:3px;background:linear-gradient(90deg,#00b0ca 0%,#8dc63f 50%,#2d6080 100%);"></div>
+<nav>
+  <div class="nav-inner">
+    <div class="nav-tab active" onclick="showTab('cheatsheet')">⚡ Cheatsheet CLI</div>
+    <div class="nav-tab" onclick="showTab('hcl')">📝 Syntaxe HCL</div>
+    <div class="nav-tab" onclick="showTab('blocs')">🧱 Blocs & Types</div>
+    <div class="nav-tab" onclick="showTab('azure')">☁️ Azure Resources</div>
+    <div class="nav-tab" onclick="showTab('avance')">🚀 Avancé</div>
+    <div class="nav-tab" onclick="showTab('state')">💾 State</div>
+    <div class="nav-tab" onclick="showTab('bonnes')">✅ Bonnes Pratiques</div>
+    <div class="nav-tab" onclick="showTab('liens')">🔗 Liens</div>
+    <div class="nav-tab" onclick="showTab('quiz')">🧠 Quiz Révisions</div>
+  </div>
+</nav>
+
+<main>
+
+<!-- ==================== CHEATSHEET CLI ==================== -->
+<div class="section active" id="tab-cheatsheet">
+  <div class="section-title">⚡ Commandes CLI Essentielles</div>
+  <p class="section-subtitle">Les commandes du quotidien — du projet vierge jusqu'au destroy</p>
+
+  <!-- Workflow visuel -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1.5rem;">
+    <div style="font-weight:700;color:white;margin-bottom:1rem;">🔄 Workflow Terraform</div>
+    <div class="workflow">
+      <div class="wf-step">
+        <div class="wf-icon">✍️</div>
+        <div class="wf-name">Write</div>
+        <div class="wf-cmd">*.tf</div>
+      </div>
+      <div class="wf-arrow">→</div>
+      <div class="wf-step" style="border-color:var(--purple)">
+        <div class="wf-icon">🔧</div>
+        <div class="wf-name">Init</div>
+        <div class="wf-cmd">tf init</div>
+      </div>
+      <div class="wf-arrow">→</div>
+      <div class="wf-step" style="border-color:var(--warn)">
+        <div class="wf-icon">🔍</div>
+        <div class="wf-name">Plan</div>
+        <div class="wf-cmd">tf plan</div>
+      </div>
+      <div class="wf-arrow">→</div>
+      <div class="wf-step" style="border-color:var(--accent)">
+        <div class="wf-icon">🚀</div>
+        <div class="wf-name">Apply</div>
+        <div class="wf-cmd">tf apply</div>
+      </div>
+      <div class="wf-arrow">→</div>
+      <div class="wf-step" style="border-color:var(--danger)">
+        <div class="wf-icon">🗑️</div>
+        <div class="wf-name">Destroy</div>
+        <div class="wf-cmd">tf destroy</div>
+      </div>
+    </div>
+    <div class="tip" style="margin-top:1rem">
+      <strong>💡 Note :</strong> <code>init</code> doit être relancé à chaque modification du bloc <code>terraform {}</code> ou <code>provider {}</code>.
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-purple">🔧</div>
+        <h3>terraform init</h3>
+      </div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<div class="label">Initialisation</div><span class="kw">terraform</span> init
+
+<span class="cmt"># Mise à jour des providers</span>
+<span class="kw">terraform</span> init -upgrade
+
+<span class="cmt"># Reconfiguration du backend</span>
+<span class="kw">terraform</span> init -reconfigure
+
+<span class="cmt"># Backend distant depuis fichier</span>
+<span class="kw">terraform</span> init -backend-config=<span class="str">"prod.tfbackend"</span></div>
+      <div class="tip"><strong>📌 :</strong> Télécharge les providers dans <code>.terraform/</code>. Ce dossier est à exclure du git.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-yellow">🔍</div>
+        <h3>terraform plan</h3>
+      </div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<div class="label">Plan d'exécution</div><span class="kw">terraform</span> plan
+
+<span class="cmt"># Sauvegarder le plan</span>
+<span class="kw">terraform</span> plan -out=<span class="str">myplan.tfplan</span>
+
+<span class="cmt"># Cibler une ressource</span>
+<span class="kw">terraform</span> plan -target=<span class="ref">azurerm_resource_group.rg</span>
+
+<span class="cmt"># Avec fichier de variables</span>
+<span class="kw">terraform</span> plan -var-file=<span class="str">"prod.tfvars"</span>
+
+<span class="cmt"># Refresh-only (pas de modification)</span>
+<span class="kw">terraform</span> plan -refresh-only</div>
+      <div class="tip"><strong>💡 :</strong> Symboles dans le plan : <code>+</code> création, <code>-</code> destruction, <code>~</code> mise à jour, <code>-/+</code> remplacement.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-green">🚀</div>
+        <h3>terraform apply</h3>
+      </div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<div class="label">Application</div><span class="kw">terraform</span> apply
+
+<span class="cmt"># Sans confirmation interactive (CI/CD)</span>
+<span class="kw">terraform</span> apply -auto-approve
+
+<span class="cmt"># Appliquer un plan sauvegardé</span>
+<span class="kw">terraform</span> apply myplan.tfplan
+
+<span class="cmt"># Forcer la recréation d'une ressource</span>
+<span class="kw">terraform</span> apply -replace=<span class="ref">azurerm_linux_vm.vm</span>
+
+<span class="cmt"># Avec fichier de variables</span>
+<span class="kw">terraform</span> apply -var-file=<span class="str">"prod.tfvars"</span></div>
+      <div class="tip warn"><strong>⚠️ -auto-approve :</strong> À utiliser uniquement en CI/CD ou tests. En prod, toujours valider le plan avant.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-red">🗑️</div>
+        <h3>terraform destroy</h3>
+      </div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<div class="label">Destruction</div><span class="kw">terraform</span> destroy
+
+<span class="cmt"># Sans confirmation</span>
+<span class="kw">terraform</span> destroy -auto-approve
+
+<span class="cmt"># Cibler une ressource</span>
+<span class="kw">terraform</span> destroy -target=<span class="ref">azurerm_resource_group.rg</span></div>
+      <div class="tip danger"><strong>🚨 Attention :</strong> Supprime TOUTES les ressources gérées par Terraform. Irréversible sans backup.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-blue">🛠️</div>
+        <h3>terraform validate & fmt</h3>
+      </div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<div class="label">Qualité du code</div><span class="cmt"># Vérification syntaxique</span>
+<span class="kw">terraform</span> validate
+
+<span class="cmt"># Formatage du code (cohérence)</span>
+<span class="kw">terraform</span> fmt
+
+<span class="cmt"># Formatage récursif</span>
+<span class="kw">terraform</span> fmt -recursive
+
+<span class="cmt"># Voir les changements de formatage</span>
+<span class="kw">terraform</span> fmt -diff
+
+<span class="cmt"># Vérifier sans modifier (CI)</span>
+<span class="kw">terraform</span> fmt -check</div>
+      <div class="tip success"><strong>✅ Best practice :</strong> Activer <code>Format On Save</code> dans VSCode avec l'extension HashiCorp Terraform.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-orange">🔎</div>
+        <h3>terraform output & show</h3>
+      </div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<div class="label">Consultation</div><span class="cmt"># Voir tous les outputs</span>
+<span class="kw">terraform</span> output
+
+<span class="cmt"># Voir un output spécifique</span>
+<span class="kw">terraform</span> output vm_ip_address
+
+<span class="cmt"># Format JSON (scripts)</span>
+<span class="kw">terraform</span> output -json
+
+<span class="cmt"># Voir l'état complet</span>
+<span class="kw">terraform</span> show
+
+<span class="cmt"># Voir une ressource spécifique</span>
+<span class="kw">terraform</span> show -json | jq</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-blue">📊</div>
+        <h3>Variables en ligne</h3>
+      </div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<div class="label">Passage de variables</div><span class="cmt"># Via argument -var</span>
+<span class="kw">terraform</span> apply -var=<span class="str">"env=prod"</span>
+
+<span class="cmt"># Via fichier .tfvars auto-chargé</span>
+<span class="cmt"># terraform.tfvars ou *.auto.tfvars</span>
+
+<span class="cmt"># Via variable d'environnement</span>
+<span class="kw">export</span> TF_VAR_env=<span class="str">"prod"</span>
+<span class="kw">export</span> TF_VAR_subscription_id=<span class="str">"..."</span>
+
+<span class="cmt"># Fichier explicite</span>
+<span class="kw">terraform</span> apply -var-file=<span class="str">"secrets.tfvars"</span></div>
+      <div class="tip"><strong>💡 Priorité :</strong> CLI > env vars > <code>*.auto.tfvars</code> > <code>terraform.tfvars</code> > default</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-green">🔄</div>
+        <h3>Commandes utiles diverses</h3>
+      </div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<div class="label">Divers</div><span class="cmt"># Version installée</span>
+<span class="kw">terraform</span> -version
+
+<span class="cmt"># Aide générale</span>
+<span class="kw">terraform</span> -help
+
+<span class="cmt"># Aide sur une commande</span>
+<span class="kw">terraform</span> apply -help
+
+<span class="cmt"># Graphe de dépendances (dot)</span>
+<span class="kw">terraform</span> graph | dot -Tsvg > graph.svg
+
+<span class="cmt"># Console interactive HCL</span>
+<span class="kw">terraform</span> console</div>
+      <div class="tip"><strong>💡 terraform console :</strong> Excellent pour tester des expressions HCL, fonctions, et explorer les données.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SYNTAXE HCL ==================== -->
+<div class="section" id="tab-hcl">
+  <div class="section-title">📝 Syntaxe HCL</div>
+  <p class="section-subtitle">HashiCorp Configuration Language — types, expressions, fonctions</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-blue">📦</div><h3>Types simples</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="kw">variable</span> <span class="str">"exemples"</span> {
+  <span class="cmt"># String</span>
+  <span class="ref">env</span>    = <span class="str">"production"</span>
+
+  <span class="cmt"># Number</span>
+  <span class="ref">count</span>  = <span class="val">3</span>
+  <span class="ref">price</span>  = <span class="val">3.14</span>
+
+  <span class="cmt"># Bool</span>
+  <span class="ref">enable</span> = <span class="val">true</span>
+}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-orange">🗂️</div><h3>Types complexes</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># List (indexée, type unique)</span>
+<span class="ref">regions</span> = [<span class="str">"westeurope"</span>, <span class="str">"northeurope"</span>]
+
+<span class="cmt"># Map de strings</span>
+<span class="ref">tags</span> = {
+  env   = <span class="str">"prod"</span>
+  owner = <span class="str">"devops"</span>
+}
+
+<span class="cmt"># Object</span>
+<span class="ref">vm_config</span> = {
+  size     = <span class="str">"Standard_B2s"</span>
+  os_disk  = <span class="val">30</span>
+  admin    = <span class="str">"azureuser"</span>
+}
+
+<span class="cmt"># Map d'objects</span>
+<span class="ref">servers</span> = {
+  web = { size = <span class="str">"B1s"</span>, zone = <span class="val">1</span> }
+  api = { size = <span class="str">"B2s"</span>, zone = <span class="val">2</span> }
+}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-purple">🔤</div><h3>Interpolation & Expressions</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Interpolation dans une string</span>
+<span class="ref">name</span> = <span class="str">"vm-${var.env}-${var.region}"</span>
+
+<span class="cmt"># Expression conditionnelle</span>
+<span class="ref">sku</span> = <span class="ref">var.env</span> == <span class="str">"prod"</span> ? <span class="str">"Premium_LRS"</span> : <span class="str">"Standard_LRS"</span>
+
+<span class="cmt"># Référence ressource</span>
+<span class="ref">subnet_id</span> = <span class="ref">azurerm_subnet.main.id</span>
+
+<span class="cmt"># Référence data source</span>
+<span class="ref">rg_id</span> = <span class="ref">data.azurerm_resource_group.existing.id</span>
+
+<span class="cmt"># Référence module</span>
+<span class="ref">vnet_id</span> = <span class="ref">module.network.vnet_id</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-green">🔧</div><h3>Fonctions HCL essentielles</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Chaînes de caractères</span>
+<span class="fn">lower</span>(<span class="str">"PROD"</span>)           <span class="cmt"># => "prod"</span>
+<span class="fn">upper</span>(<span class="str">"web"</span>)           <span class="cmt"># => "WEB"</span>
+<span class="fn">format</span>(<span class="str">"vm-%s-%02d"</span>, <span class="ref">var.env</span>, <span class="val">1</span>)
+
+<span class="cmt"># Listes & maps</span>
+<span class="fn">length</span>(<span class="ref">var.regions</span>)    <span class="cmt"># nb d'éléments</span>
+<span class="fn">toset</span>(<span class="ref">var.list</span>)        <span class="cmt"># list → set</span>
+<span class="fn">tomap</span>({ ... })         <span class="cmt"># object → map</span>
+<span class="fn">keys</span>(<span class="ref">var.servers</span>)      <span class="cmt"># clés d'une map</span>
+<span class="fn">values</span>(<span class="ref">var.servers</span>)    <span class="cmt"># valeurs</span>
+<span class="fn">merge</span>(<span class="ref">map1</span>, <span class="ref">map2</span>)      <span class="cmt"># fusionner maps</span>
+
+<span class="cmt"># Numérique</span>
+<span class="fn">max</span>(<span class="val">1</span>, <span class="val">2</span>, <span class="val">3</span>)           <span class="cmt"># => 3</span>
+<span class="fn">min</span>(<span class="val">1</span>, <span class="val">2</span>, <span class="val">3</span>)           <span class="cmt"># => 1</span>
+
+<span class="cmt"># Fichiers</span>
+<span class="fn">file</span>(<span class="str">"./script.sh"</span>)    <span class="cmt"># contenu fichier</span>
+<span class="fn">templatefile</span>(<span class="str">"tpl.sh"</span>, { <span class="ref">env</span> = <span class="ref">var.env</span> })</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-yellow">🔁</div><h3>Boucles : for expression</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># List → list transformée</span>
+<span class="ref">names_upper</span> = [
+  <span class="kw">for</span> n <span class="kw">in</span> <span class="ref">var.names</span> : <span class="fn">upper</span>(n)
+]
+
+<span class="cmt"># Map → list avec filtre</span>
+<span class="ref">prod_vms</span> = [
+  <span class="kw">for</span> k, v <span class="kw">in</span> <span class="ref">var.servers</span> : k
+  <span class="kw">if</span> v.env == <span class="str">"prod"</span>
+]
+
+<span class="cmt"># List → map</span>
+<span class="ref">by_name</span> = {
+  <span class="kw">for</span> vm <span class="kw">in</span> <span class="ref">var.vms</span> : vm.name => vm.ip
+}</div>
+      <div class="tip"><strong>💡 Testable dans :</strong> <code>terraform console</code></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-red">💬</div><h3>Commentaires & Heredoc</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Commentaire sur une ligne</span>
+
+<span class="cmt">// Aussi valide (style C)</span>
+
+<span class="cmt">/* Commentaire
+   multi-lignes */</span>
+
+<span class="cmt"># Heredoc (multi-lignes)</span>
+<span class="ref">custom_data</span> = <span class="val">&lt;&lt;-EOT</span>
+  <span class="str">#!/bin/bash</span>
+  <span class="str">apt-get update</span>
+  <span class="str">apt-get install -y nginx</span>
+<span class="val">EOT</span>
+
+<span class="cmt"># Heredoc avec interpolation</span>
+<span class="ref">content</span> = <span class="val">&lt;&lt;-EOT</span>
+  <span class="str">ENV=${</span><span class="ref">var.env</span><span class="str">}</span>
+<span class="val">EOT</span></div>
+    </div>
+  </div>
+
+  <div class="tip" style="margin-bottom:1.5rem">
+    <strong>🔍 Variables : priorité d'évaluation</strong><br>
+    <code>-var</code> CLI > Variables d'env <code>TF_VAR_*</code> > <code>*.auto.tfvars</code> > <code>terraform.tfvars</code> > valeur <code>default</code> > erreur si absent
+  </div>
+</div>
+
+<!-- ==================== BLOCS & TYPES ==================== -->
+<div class="section" id="tab-blocs">
+  <div class="section-title">🧱 Blocs HCL</div>
+  <p class="section-subtitle">Référence des blocs parents Terraform avec exemples annotés</p>
+
+  <div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion(this)">
+      <span>⚙️ Bloc <code>terraform {}</code> — Configuration du projet</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="accordion-body">
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="kw">terraform</span> {
+  <span class="cmt"># Version de Terraform requise</span>
+  required_version = <span class="str">"~> 1.5"</span>
+
+  <span class="cmt"># Providers nécessaires (avec version fixée)</span>
+  required_providers {
+    azurerm = {
+      source  = <span class="str">"hashicorp/azurerm"</span>
+      version = <span class="str">"~> 3.90"</span>
+    }
+    random = {
+      source  = <span class="str">"hashicorp/random"</span>
+      version = <span class="str">"~> 3.6"</span>
+    }
+  }
+
+  <span class="cmt"># Backend distant (Azure Blob)</span>
+  backend <span class="str">"azurerm"</span> {
+    resource_group_name  = <span class="str">"rg-tfstate"</span>
+    storage_account_name = <span class="str">"sttfstateprod"</span>
+    container_name       = <span class="str">"tfstate"</span>
+    key                  = <span class="str">"prod/terraform.tfstate"</span>
+  }
+}</div>
+      <div class="tip"><strong>📌 :</strong> Ce bloc ne peut utiliser ni variables, ni fonctions, ni références. Uniquement des constantes.</div>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion(this)">
+      <span>🔌 Bloc <code>provider {}</code> — Configuration du fournisseur</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="accordion-body">
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="kw">provider</span> <span class="str">"azurerm"</span> {
+  features {}  <span class="cmt"># Obligatoire pour azurerm</span>
+
+  subscription_id = <span class="ref">var.subscription_id</span>
+  <span class="cmt"># tenant_id, client_id, client_secret si SP</span>
+}
+
+<span class="cmt"># Provider avec alias (multi-région/subscription)</span>
+<span class="kw">provider</span> <span class="str">"azurerm"</span> {
+  alias           = <span class="str">"secondary"</span>
+  features        {}
+  subscription_id = <span class="ref">var.secondary_sub_id</span>
+}
+
+<span class="cmt"># Utilisation de l'alias dans une ressource</span>
+<span class="kw">resource</span> <span class="str">"azurerm_resource_group"</span> <span class="str">"secondary"</span> {
+  provider = <span class="ref">azurerm.secondary</span>
+  name     = <span class="str">"rg-secondary"</span>
+  location = <span class="str">"northeurope"</span>
+}</div>
+      <div class="tip"><strong>🔐 Auth Azure :</strong> En local, utilisez <code>az login</code>. En CI/CD, définissez <code>ARM_CLIENT_ID</code>, <code>ARM_CLIENT_SECRET</code>, <code>ARM_TENANT_ID</code>, <code>ARM_SUBSCRIPTION_ID</code> en variables d'env.</div>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion(this)">
+      <span>🏗️ Bloc <code>resource {}</code> — Ressources d'infrastructure</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="accordion-body">
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Syntaxe: resource "TYPE" "NOM_TERRAFORM" {}</span>
+<span class="kw">resource</span> <span class="str">"azurerm_resource_group"</span> <span class="str">"rg"</span> {
+  name     = <span class="str">"rg-${var.env}-demo"</span>
+  location = <span class="ref">var.location</span>
+  tags     = <span class="ref">local.common_tags</span>
+}
+
+<span class="cmt"># Meta-arguments disponibles sur toute ressource</span>
+<span class="kw">resource</span> <span class="str">"azurerm_virtual_network"</span> <span class="str">"vnet"</span> {
+  name                = <span class="str">"vnet-demo"</span>
+  location            = <span class="ref">azurerm_resource_group.rg.location</span>  <span class="cmt"># dépendance implicite</span>
+  resource_group_name = <span class="ref">azurerm_resource_group.rg.name</span>
+  address_space       = [<span class="str">"10.0.0.0/16"</span>]
+
+  <span class="cmt"># Dépendance explicite</span>
+  depends_on = [<span class="ref">azurerm_resource_group.rg</span>]
+
+  <span class="cmt"># Comportement du cycle de vie</span>
+  lifecycle {
+    prevent_destroy       = <span class="val">true</span>      <span class="cmt"># empêche le destroy</span>
+    ignore_changes        = [<span class="ref">tags</span>]   <span class="cmt"># ignore les changements de tags</span>
+    create_before_destroy = <span class="val">true</span>      <span class="cmt"># crée avant de détruire</span>
+  }
+}</div>
+      <p>Référence d'un attribut : <code>TYPE.NOM.ATTRIBUT</code> → ex: <code>azurerm_resource_group.rg.id</code></p>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion(this)">
+      <span>🔎 Bloc <code>data {}</code> — Lecture de ressources existantes</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="accordion-body">
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Récupérer un RG existant (non géré par ce projet)</span>
+<span class="kw">data</span> <span class="str">"azurerm_resource_group"</span> <span class="str">"existing"</span> {
+  name = <span class="str">"rg-shared-infra"</span>
+}
+
+<span class="cmt"># Récupérer l'ID d'une subscription Azure</span>
+<span class="kw">data</span> <span class="str">"azurerm_subscription"</span> <span class="str">"current"</span> {}
+
+<span class="cmt"># Utiliser la data dans une ressource</span>
+<span class="kw">resource</span> <span class="str">"azurerm_virtual_machine"</span> <span class="str">"vm"</span> {
+  resource_group_name = <span class="ref">data.azurerm_resource_group.existing.name</span>
+  location            = <span class="ref">data.azurerm_resource_group.existing.location</span>
+}</div>
+      <div class="tip"><strong>💡 :</strong> Référence : <code>data.TYPE.NOM.ATTRIBUT</code>. Lecture seule, ne crée rien, ne modifie rien.</div>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion(this)">
+      <span>📥 Bloc <code>variable {}</code> — Variables d'entrée</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="accordion-body">
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="kw">variable</span> <span class="str">"env"</span> {
+  type        = <span class="ref">string</span>
+  description = <span class="str">"Environnement de déploiement"</span>
+  default     = <span class="str">"dev"</span>
+
+  <span class="cmt"># Contrainte de validation</span>
+  validation {
+    condition     = <span class="fn">contains</span>([<span class="str">"dev"</span>, <span class="str">"staging"</span>, <span class="str">"prod"</span>], <span class="ref">var.env</span>)
+    error_message = <span class="str">"env doit être dev, staging ou prod."</span>
+  }
+}
+
+<span class="kw">variable</span> <span class="str">"db_password"</span> {
+  type      = <span class="ref">string</span>
+  sensitive = <span class="val">true</span>   <span class="cmt"># masqué dans les logs CLI</span>
+}
+
+<span class="kw">variable</span> <span class="str">"servers"</span> {
+  type = <span class="fn">map</span>(<span class="fn">object</span>({
+    size = <span class="ref">string</span>
+    zone = <span class="ref">number</span>
+  }))
+}
+
+<span class="cmt"># Utilisation</span>
+<span class="ref">var.env</span>  |  <span class="ref">var.db_password</span>  |  <span class="ref">var.servers["web"].size</span></div>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion(this)">
+      <span>📤 Bloc <code>output {}</code> — Sorties</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="accordion-body">
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="kw">output</span> <span class="str">"vm_public_ip"</span> {
+  description = <span class="str">"Adresse IP publique de la VM"</span>
+  value       = <span class="ref">azurerm_public_ip.pip.ip_address</span>
+}
+
+<span class="kw">output</span> <span class="str">"connection_string"</span> {
+  value     = <span class="ref">azurerm_mssql_server.sql.fully_qualified_domain_name</span>
+  sensitive = <span class="val">true</span>
+}
+
+<span class="cmt"># Récupérer depuis CLI</span>
+<span class="kw">terraform</span> output vm_public_ip
+<span class="kw">terraform</span> output -json</div>
+      <div class="tip"><strong>📌 :</strong> Les outputs ne sont disponibles qu'après un <code>apply</code>, jamais lors d'un <code>plan</code>.</div>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion(this)">
+      <span>🏠 Bloc <code>locals {}</code> — Variables locales</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="accordion-body">
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="kw">locals</span> {
+  <span class="cmt"># Convention de nommage centralisée</span>
+  prefix = <span class="str">"${var.project}-${var.env}"</span>
+  
+  <span class="cmt"># Tags communs appliqués partout</span>
+  common_tags = {
+    Environment = <span class="ref">var.env</span>
+    Project     = <span class="ref">var.project</span>
+    ManagedBy   = <span class="str">"Terraform"</span>
+    UpdatedAt   = <span class="fn">formatdate</span>(<span class="str">"YYYY-MM-DD"</span>, <span class="fn">timestamp</span>())
+  }
+
+  <span class="cmt"># Calcul dynamique</span>
+  vm_names = {
+    <span class="kw">for</span> k, v <span class="kw">in</span> <span class="ref">var.servers</span> : k => <span class="str">"vm-${local.prefix}-${k}"</span>
+  }
+}
+
+<span class="cmt"># Utilisation</span>
+name = <span class="str">"${local.prefix}-vnet"</span>
+tags = <span class="ref">local.common_tags</span></div>
+      <div class="tip warn"><strong>⚠️ :</strong> Recalculées à chaque plan/apply. Ne pas abuser : trop de locals rend le code difficile à lire.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== AZURE RESOURCES ==================== -->
+<div class="section" id="tab-azure">
+  <div class="section-title">☁️ Ressources Azure Courantes</div>
+  <p class="section-subtitle">Templates prêts à l'emploi pour les ressources azurerm les plus utilisées</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-blue">📁</div><h3>Resource Group</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="kw">resource</span> <span class="str">"azurerm_resource_group"</span> <span class="str">"rg"</span> {
+  name     = <span class="str">"rg-${var.project}-${var.env}"</span>
+  location = <span class="ref">var.location</span>
+  tags     = <span class="ref">local.common_tags</span>
+}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-green">🌐</div><h3>Virtual Network + Subnet</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="kw">resource</span> <span class="str">"azurerm_virtual_network"</span> <span class="str">"vnet"</span> {
+  name                = <span class="str">"vnet-${local.prefix}"</span>
+  resource_group_name = <span class="ref">azurerm_resource_group.rg.name</span>
+  location            = <span class="ref">azurerm_resource_group.rg.location</span>
+  address_space       = [<span class="str">"10.0.0.0/16"</span>]
+  tags                = <span class="ref">local.common_tags</span>
+}
+
+<span class="kw">resource</span> <span class="str">"azurerm_subnet"</span> <span class="str">"subnet"</span> {
+  name                 = <span class="str">"snet-${local.prefix}"</span>
+  resource_group_name  = <span class="ref">azurerm_resource_group.rg.name</span>
+  virtual_network_name = <span class="ref">azurerm_virtual_network.vnet.name</span>
+  address_prefixes     = [<span class="str">"10.0.1.0/24"</span>]
+}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-orange">🖥️</div><h3>VM Linux</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="kw">resource</span> <span class="str">"azurerm_linux_virtual_machine"</span> <span class="str">"vm"</span> {
+  name                = <span class="str">"vm-${local.prefix}"</span>
+  resource_group_name = <span class="ref">azurerm_resource_group.rg.name</span>
+  location            = <span class="ref">azurerm_resource_group.rg.location</span>
+  size                = <span class="str">"Standard_B2s"</span>
+  admin_username      = <span class="str">"azureuser"</span>
+
+  network_interface_ids = [
+    <span class="ref">azurerm_network_interface.nic.id</span>
+  ]
+
+  admin_ssh_key {
+    username   = <span class="str">"azureuser"</span>
+    public_key = <span class="fn">file</span>(<span class="str">"~/.ssh/id_rsa.pub"</span>)
+  }
+
+  os_disk {
+    caching              = <span class="str">"ReadWrite"</span>
+    storage_account_type = <span class="str">"Standard_LRS"</span>
+  }
+
+  source_image_reference {
+    publisher = <span class="str">"Canonical"</span>
+    offer     = <span class="str">"0001-com-ubuntu-server-jammy"</span>
+    sku       = <span class="str">"22_04-lts"</span>
+    version   = <span class="str">"latest"</span>
+  }
+}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-purple">🗄️</div><h3>Compte de stockage</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="kw">resource</span> <span class="str">"azurerm_storage_account"</span> <span class="str">"st"</span> {
+  name                     = <span class="str">"st${local.prefix_nodash}"</span>
+  resource_group_name      = <span class="ref">azurerm_resource_group.rg.name</span>
+  location                 = <span class="ref">azurerm_resource_group.rg.location</span>
+  account_tier             = <span class="str">"Standard"</span>
+  account_replication_type = <span class="str">"LRS"</span>
+  tags                     = <span class="ref">local.common_tags</span>
+}
+
+<span class="kw">resource</span> <span class="str">"azurerm_storage_container"</span> <span class="str">"tfstate"</span> {
+  name                  = <span class="str">"tfstate"</span>
+  storage_account_name  = <span class="ref">azurerm_storage_account.st.name</span>
+  container_access_type = <span class="str">"private"</span>
+}</div>
+      <div class="tip warn"><strong>⚠️ :</strong> Le nom du compte de stockage doit être unique globalement, sans tirets, 3-24 caractères.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-red">🔑</div><h3>Key Vault</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="kw">data</span> <span class="str">"azurerm_client_config"</span> <span class="str">"current"</span> {}
+
+<span class="kw">resource</span> <span class="str">"azurerm_key_vault"</span> <span class="str">"kv"</span> {
+  name                = <span class="str">"kv-${local.prefix}"</span>
+  location            = <span class="ref">azurerm_resource_group.rg.location</span>
+  resource_group_name = <span class="ref">azurerm_resource_group.rg.name</span>
+  tenant_id           = <span class="ref">data.azurerm_client_config.current.tenant_id</span>
+  sku_name            = <span class="str">"standard"</span>
+
+  access_policy {
+    tenant_id = <span class="ref">data.azurerm_client_config.current.tenant_id</span>
+    object_id = <span class="ref">data.azurerm_client_config.current.object_id</span>
+    secret_permissions = [<span class="str">"Get"</span>, <span class="str">"Set"</span>, <span class="str">"List"</span>, <span class="str">"Delete"</span>]
+  }
+}
+
+<span class="cmt"># Lire un secret depuis le Key Vault</span>
+<span class="kw">data</span> <span class="str">"azurerm_key_vault_secret"</span> <span class="str">"db_pass"</span> {
+  name         = <span class="str">"db-admin-password"</span>
+  key_vault_id = <span class="ref">azurerm_key_vault.kv.id</span>
+}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-blue">🗃️</div><h3>Azure SQL Server + Database</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="kw">resource</span> <span class="str">"random_password"</span> <span class="str">"sql_pass"</span> {
+  length  = <span class="val">16</span>
+  special = <span class="val">true</span>
+}
+
+<span class="kw">resource</span> <span class="str">"azurerm_mssql_server"</span> <span class="str">"sql"</span> {
+  name                         = <span class="str">"sql-${local.prefix}"</span>
+  resource_group_name          = <span class="ref">azurerm_resource_group.rg.name</span>
+  location                     = <span class="ref">azurerm_resource_group.rg.location</span>
+  version                      = <span class="str">"12.0"</span>
+  administrator_login          = <span class="str">"sqladmin"</span>
+  administrator_login_password = <span class="ref">random_password.sql_pass.result</span>
+}
+
+<span class="kw">resource</span> <span class="str">"azurerm_mssql_database"</span> <span class="str">"db"</span> {
+  name      = <span class="str">"db-${local.prefix}"</span>
+  server_id = <span class="ref">azurerm_mssql_server.sql.id</span>
+  sku_name  = <span class="str">"S0"</span>
+}</div>
+      <div class="tip danger"><strong>🔐 :</strong> Le state contiendra le mot de passe en clair si on utilise <code>random_password</code>. Bien sécuriser le backend distant.</div>
+    </div>
+  </div>
+
+  <h4 style="margin-top:0.5rem;margin-bottom:1rem;">🏷️ Convention de nommage Azure recommandée</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Ressource</th><th>Préfixe</th><th>Exemple</th></tr></thead>
+      <tbody>
+        <tr><td>Resource Group</td><td><code>rg-</code></td><td><code>rg-myapp-prod</code></td></tr>
+        <tr><td>Virtual Network</td><td><code>vnet-</code></td><td><code>vnet-myapp-prod</code></td></tr>
+        <tr><td>Subnet</td><td><code>snet-</code></td><td><code>snet-myapp-prod-web</code></td></tr>
+        <tr><td>Network Interface</td><td><code>nic-</code></td><td><code>nic-vm-myapp-001</code></td></tr>
+        <tr><td>Public IP</td><td><code>pip-</code></td><td><code>pip-myapp-prod</code></td></tr>
+        <tr><td>Virtual Machine</td><td><code>vm-</code></td><td><code>vm-myapp-prod-001</code></td></tr>
+        <tr><td>Storage Account</td><td><code>st</code></td><td><code>stmyappprod</code> (pas de tirets)</td></tr>
+        <tr><td>Key Vault</td><td><code>kv-</code></td><td><code>kv-myapp-prod</code></td></tr>
+        <tr><td>SQL Server</td><td><code>sql-</code></td><td><code>sql-myapp-prod</code></td></tr>
+        <tr><td>App Service Plan</td><td><code>asp-</code></td><td><code>asp-myapp-prod</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== AVANCÉ ==================== -->
+<div class="section" id="tab-avance">
+  <div class="section-title">🚀 Utilisation Avancée</div>
+  <p class="section-subtitle">count, for_each, modules, conditions — la puissance de Terraform</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-blue">🔢</div><h3>Meta-argument : count</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Créer 3 instances identiques</span>
+<span class="kw">resource</span> <span class="str">"azurerm_resource_group"</span> <span class="str">"rg"</span> {
+  count    = <span class="val">3</span>
+  name     = <span class="str">"rg-app-${count.index}"</span>
+  location = <span class="str">"westeurope"</span>
+}
+
+<span class="cmt"># Conditionnel (0 ou 1 ressource)</span>
+<span class="kw">resource</span> <span class="str">"azurerm_public_ip"</span> <span class="str">"pip"</span> {
+  count               = <span class="ref">var.create_public_ip</span> ? <span class="val">1</span> : <span class="val">0</span>
+  name                = <span class="str">"pip-demo"</span>
+  resource_group_name = <span class="ref">azurerm_resource_group.rg[0].name</span>
+  location            = <span class="str">"westeurope"</span>
+  allocation_method   = <span class="str">"Static"</span>
+}
+
+<span class="cmt"># Référencer la ressource</span>
+<span class="ref">azurerm_resource_group.rg[0].name</span>   <span class="cmt"># index 0</span>
+<span class="ref">azurerm_resource_group.rg[*].name</span>   <span class="cmt"># tous (liste)</span></div>
+      <div class="tip warn"><strong>⚠️ :</strong> <code>count</code> utilise des index numériques. Supprimer un élément en milieu de liste = destruction/recréation des suivants. Préférer <code>for_each</code>.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-green">🔁</div><h3>Meta-argument : for_each</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># for_each avec une map d'objects</span>
+<span class="kw">variable</span> <span class="str">"subnets"</span> {
+  default = {
+    web  = { prefix = <span class="str">"10.0.1.0/24"</span> }
+    api  = { prefix = <span class="str">"10.0.2.0/24"</span> }
+    data = { prefix = <span class="str">"10.0.3.0/24"</span> }
+  }
+}
+
+<span class="kw">resource</span> <span class="str">"azurerm_subnet"</span> <span class="str">"subnets"</span> {
+  for_each             = <span class="ref">var.subnets</span>
+  name                 = <span class="str">"snet-${each.key}"</span>   <span class="cmt"># "web", "api", "data"</span>
+  resource_group_name  = <span class="ref">azurerm_resource_group.rg.name</span>
+  virtual_network_name = <span class="ref">azurerm_virtual_network.vnet.name</span>
+  address_prefixes     = [<span class="ref">each.value.prefix</span>]
+}
+
+<span class="cmt"># Référencer avec la clé</span>
+<span class="ref">azurerm_subnet.subnets["web"].id</span></div>
+      <div class="tip success"><strong>✅ Préférer for_each :</strong> Utilise des clés stables → pas de destruction en cascade lors de modifications de la liste.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-purple">📦</div><h3>Modules — Création</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Structure d'un module</span>
+modules/
+  network/
+    main.tf        <span class="cmt"># Ressources</span>
+    variables.tf   <span class="cmt"># Inputs</span>
+    outputs.tf     <span class="cmt"># Outputs exportés</span>
+    README.md      <span class="cmt"># Documentation</span>
+
+<span class="cmt"># modules/network/variables.tf</span>
+<span class="kw">variable</span> <span class="str">"prefix"</span> { type = <span class="ref">string</span> }
+<span class="kw">variable</span> <span class="str">"address_space"</span> { type = <span class="fn">list</span>(<span class="ref">string</span>) }
+
+<span class="cmt"># modules/network/outputs.tf</span>
+<span class="kw">output</span> <span class="str">"vnet_id"</span> {
+  value = <span class="ref">azurerm_virtual_network.vnet.id</span>
+}
+<span class="kw">output</span> <span class="str">"subnet_ids"</span> {
+  value = { <span class="kw">for</span> k, s <span class="kw">in</span> <span class="ref">azurerm_subnet.subnets</span> : k => s.id }
+}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-orange">🔌</div><h3>Modules — Utilisation</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Appel d'un module local</span>
+<span class="kw">module</span> <span class="str">"network"</span> {
+  source        = <span class="str">"./modules/network"</span>
+  prefix        = <span class="ref">local.prefix</span>
+  address_space = [<span class="str">"10.0.0.0/16"</span>]
+}
+
+<span class="cmt"># Module depuis le registre Terraform</span>
+<span class="kw">module</span> <span class="str">"vnet"</span> {
+  source  = <span class="str">"Azure/vnet/azurerm"</span>
+  version = <span class="str">"~> 4.0"</span>
+}
+
+<span class="cmt"># Module depuis Git</span>
+<span class="kw">module</span> <span class="str">"app"</span> {
+  source = <span class="str">"git::https://github.com/org/tf-modules.git//app?ref=v1.2.0"</span>
+}
+
+<span class="cmt"># Utilisation des outputs du module</span>
+<span class="ref">module.network.vnet_id</span>
+<span class="ref">module.network.subnet_ids["web"]</span>
+
+<span class="cmt"># for_each sur un module</span>
+<span class="kw">module</span> <span class="str">"vm"</span> {
+  for_each = <span class="ref">var.servers</span>
+  source   = <span class="str">"./modules/vm"</span>
+  name     = <span class="ref">each.key</span>
+  size     = <span class="ref">each.value.size</span>
+}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-yellow">🔄</div><h3>Import de ressources existantes</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Méthode 1 : commande CLI</span>
+<span class="cmt"># terraform import ADRESSE_TERRAFORM ID_AZURE</span>
+<span class="kw">terraform</span> import azurerm_resource_group.rg \
+  /subscriptions/{sub_id}/resourceGroups/rg-existing
+
+<span class="cmt"># Méthode 2 : bloc import (Terraform ≥ 1.5)</span>
+<span class="kw">import</span> {
+  to = <span class="ref">azurerm_resource_group.rg</span>
+  id = <span class="str">"/subscriptions/.../resourceGroups/rg-existing"</span>
+}
+<span class="kw">resource</span> <span class="str">"azurerm_resource_group"</span> <span class="str">"rg"</span> {
+  name     = <span class="str">"rg-existing"</span>
+  location = <span class="str">"westeurope"</span>
+}
+
+<span class="cmt"># Générer le code automatiquement (expérimental)</span>
+<span class="kw">terraform</span> plan -generate-config-out=generated.tf</div>
+      <div class="tip"><strong>🔍 Trouver l'ID Azure :</strong> Dans le portail Azure → ressource → <em>Vue JSON</em> → champ <code>id</code>.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-red">✏️</div><h3>Renommage — bloc moved</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Renommer une ressource dans Terraform</span>
+<span class="cmt"># sans détruire/recréer la ressource réelle</span>
+
+<span class="kw">moved</span> {
+  from = <span class="ref">azurerm_resource_group.old_name</span>
+  to   = <span class="ref">azurerm_resource_group.new_name</span>
+}
+
+<span class="cmt"># Ou via CLI (moins recommandé)</span>
+<span class="kw">terraform</span> state mv \
+  azurerm_resource_group.old_name \
+  azurerm_resource_group.new_name</div>
+      <div class="tip warn"><strong>⚠️ :</strong> Sans <code>moved</code>, Terraform voit l'ancien nom comme "à détruire" et le nouveau comme "à créer" — ce qui supprimerait votre infra.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== STATE ==================== -->
+<div class="section" id="tab-state">
+  <div class="section-title">💾 Gestion du State</div>
+  <p class="section-subtitle">L'élément central de Terraform — commandes, backends, bonnes pratiques</p>
+
+  <div class="tip" style="margin-bottom:1.5rem">
+    <strong>ℹ️ Le state c'est quoi ?</strong> Un fichier JSON (<code>terraform.tfstate</code>) qui maintient la correspondance entre votre code HCL et les ressources réelles chez le provider. Terraform compare à chaque plan/apply l'état souhaité (code) vs l'état connu (state) vs l'état réel (provider).
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-blue">📋</div><h3>Commandes state essentielles</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Lister les ressources</span>
+<span class="kw">terraform</span> state list
+
+<span class="cmt"># Détail d'une ressource</span>
+<span class="kw">terraform</span> state show azurerm_resource_group.rg
+
+<span class="cmt"># Supprimer du state (pas de l'infra !)</span>
+<span class="kw">terraform</span> state rm azurerm_resource_group.rg
+
+<span class="cmt"># Renommer/déplacer dans le state</span>
+<span class="kw">terraform</span> state mv azurerm_resource_group.old azurerm_resource_group.new
+
+<span class="cmt"># Backup du state (backend distant)</span>
+<span class="kw">terraform</span> state pull > backup_$(date +%Y%m%d).tfstate
+
+<span class="cmt"># Restauration</span>
+<span class="kw">terraform</span> state push backup.tfstate
+
+<span class="cmt"># Synchroniser le state avec la réalité</span>
+<span class="kw">terraform</span> apply -refresh-only</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-orange">☁️</div><h3>Backend distant — Azure</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Dans terraform.tf</span>
+<span class="kw">terraform</span> {
+  backend <span class="str">"azurerm"</span> {
+    resource_group_name  = <span class="str">"rg-tfstate"</span>
+    storage_account_name = <span class="str">"sttfstate12345"</span>
+    container_name       = <span class="str">"tfstate"</span>
+    key                  = <span class="str">"prod/myapp.tfstate"</span>
+  }
+}
+
+<span class="cmt"># Ou depuis un fichier (recommandé par env)</span>
+<span class="cmt"># prod.tfbackend :</span>
+resource_group_name  = <span class="str">"rg-tfstate-prod"</span>
+storage_account_name = <span class="str">"sttfstateprod"</span>
+container_name       = <span class="str">"tfstate"</span>
+key                  = <span class="str">"myapp.tfstate"</span>
+
+<span class="cmt"># Initialiser avec fichier backend</span>
+<span class="kw">terraform</span> init -backend-config=<span class="str">"prod.tfbackend"</span></div>
+      <div class="tip success"><strong>✅ :</strong> Activer le <strong>versioning</strong> sur le container Azure Blob pour garder un historique des states.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-green">🔒</div><h3>Verrouillage du state</h3></div>
+      <p>Le backend Azure utilise un bail sur le blob pour verrouiller le state lors d'un apply. Empêche deux exécutions simultanées.</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># En cas de crash : forcer le déverrouillage</span>
+<span class="kw">terraform</span> force-unlock LOCK_ID
+
+<span class="cmt"># L'ID du lock apparaît dans le message d'erreur</span>
+<span class="cmt"># Ou le libérer depuis le portail Azure :</span>
+<span class="cmt"># Storage Account > Container > Blob > Casser le bail</span></div>
+      <div class="tip danger"><strong>⚠️ :</strong> Ne jamais forcer le déverouillage si un apply est vraiment en cours. Risque de corruption du state.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-red">🚨</div><h3>Recréation forcée</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Forcer la recréation d'une ressource</span>
+<span class="kw">terraform</span> apply -replace=azurerm_linux_virtual_machine.vm
+
+<span class="cmt"># Exemple : rotation d'un mot de passe random</span>
+<span class="kw">terraform</span> apply -replace=random_password.db_pass
+
+<span class="cmt"># Ancienne méthode (taint) — dépréciée</span>
+<span class="kw">terraform</span> taint azurerm_linux_virtual_machine.vm
+<span class="kw">terraform</span> untaint azurerm_linux_virtual_machine.vm</div>
+      <div class="tip warn"><strong>📌 :</strong> <code>-replace</code> est disponible lors d'un <code>plan</code> ET d'un <code>apply</code>. Toujours vérifier le plan d'abord car d'autres ressources peuvent être impactées.</div>
+    </div>
+  </div>
+
+  <div class="tip danger">
+    <strong>🚨 Règles d'or sur le state</strong><br>
+    1. Ne JAMAIS commiter le state dans Git (<code>*.tfstate</code> dans <code>.gitignore</code>)<br>
+    2. Ne JAMAIS modifier le state manuellement — utiliser les commandes <code>terraform state *</code><br>
+    3. Utiliser un backend distant dès qu'on travaille en équipe<br>
+    4. Sécuriser les droits d'accès au backend (le state peut contenir des secrets en clair)
+  </div>
+</div>
+
+<!-- ==================== BONNES PRATIQUES ==================== -->
+<div class="section" id="tab-bonnes">
+  <div class="section-title">✅ Bonnes Pratiques</div>
+  <p class="section-subtitle">Organisation, sécurité, conventions — écrire du Terraform professionnel</p>
+
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-blue">📁</div><h3>Organisation des fichiers</h3></div>
+      <div class="code-block">
+<span class="cmt"># Structure recommandée</span>
+projet/
+├── <span class="ref">terraform.tf</span>     <span class="cmt"># bloc terraform {} uniquement</span>
+├── <span class="ref">providers.tf</span>     <span class="cmt"># tous les blocs provider {}</span>
+├── <span class="ref">variables.tf</span>     <span class="cmt"># déclarations des variables</span>
+├── <span class="ref">locals.tf</span>        <span class="cmt"># locales partagées</span>
+├── <span class="ref">outputs.tf</span>       <span class="cmt"># toutes les sorties</span>
+├── <span class="ref">main.tf</span>          <span class="cmt"># ou par type de ressource :</span>
+├── <span class="ref">network.tf</span>       <span class="cmt"># ressources réseau</span>
+├── <span class="ref">compute.tf</span>       <span class="cmt"># VMs, etc.</span>
+├── <span class="ref">storage.tf</span>       <span class="cmt"># comptes de stockage</span>
+├── <span class="ref">prod.tfvars</span>      <span class="cmt"># secrets → hors git !</span>
+├── <span class="ref">prod.tfvars.tpl</span>  <span class="cmt"># template → dans git</span>
+├── <span class="ref">prod.tfbackend</span>   <span class="cmt"># config backend</span>
+├── <span class="ref">.terraform.lock.hcl</span>  <span class="cmt"># → dans git</span>
+└── <span class="ref">.gitignore</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-red">🙈</div><h3>.gitignore Terraform</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Répertoire providers téléchargés</span>
+.terraform/
+
+<span class="cmt"># State local et backups</span>
+*.tfstate
+*.tfstate.*
+
+<span class="cmt"># Fichiers de variables avec secrets</span>
+*.tfvars
+<span class="cmt"># Sauf les templates !</span>
+!*.tfvars.tpl
+
+<span class="cmt"># Plans sauvegardés</span>
+*.tfplan
+
+<span class="cmt"># Fichiers générés</span>
+generated.tf
+override.tf
+override.tf.json
+*_override.tf
+
+<span class="cmt"># A garder dans git :</span>
+<span class="cmt"># .terraform.lock.hcl (versions providers)</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-yellow">🏷️</div><h3>Nommage des ressources</h3></div>
+      <div class="code-block">
+<span class="cmt"># ✅ Bonnes pratiques</span>
+<span class="kw">resource</span> <span class="str">"azurerm_virtual_network"</span> <span class="str">"vnet"</span> {}
+<span class="kw">resource</span> <span class="str">"azurerm_subnet"</span> <span class="str">"subnet_web"</span> {}
+
+<span class="cmt"># ❌ À éviter</span>
+<span class="kw">resource</span> <span class="str">"azurerm_virtual_network"</span> <span class="str">"virtual_network"</span> {}
+<span class="kw">resource</span> <span class="str">"azurerm_subnet"</span> <span class="str">"subnet-web"</span> {}
+<span class="kw">resource</span> <span class="str">"azurerm_subnet"</span> <span class="str">"1subnet"</span> {}
+
+<span class="cmt"># Règles :</span>
+<span class="cmt"># - Ne pas répéter le type dans l'id</span>
+<span class="cmt"># - Underscore comme séparateur</span>
+<span class="cmt"># - Pas de chiffre en première position</span>
+<span class="cmt"># - Nom entre guillemets</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-green">🔐</div><h3>Gestion des secrets</h3></div>
+      <p>Ne jamais mettre de secrets en dur dans le code !</p>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Option 1 : Variables env (CI/CD)</span>
+<span class="kw">export</span> ARM_CLIENT_SECRET=<span class="str">"xxxx"</span>
+<span class="kw">export</span> TF_VAR_db_password=<span class="str">"xxxx"</span>
+
+<span class="cmt"># Option 2 : Fichier .tfvars hors git</span>
+db_password = <span class="str">"xxxx"</span>
+<span class="kw">terraform</span> apply -var-file=<span class="str">"secrets.tfvars"</span>
+
+<span class="cmt"># Option 3 : Azure Key Vault (recommandé)</span>
+<span class="kw">data</span> <span class="str">"azurerm_key_vault_secret"</span> <span class="str">"pass"</span> {
+  name         = <span class="str">"db-password"</span>
+  key_vault_id = <span class="ref">azurerm_key_vault.kv.id</span>
+}
+<span class="cmt"># Utilisation : data.azurerm_key_vault_secret.pass.value</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-purple">🔒</div><h3>Fixer les versions</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Toujours fixer les versions !</span>
+<span class="kw">terraform</span> {
+  required_version = <span class="str">"~> 1.7"</span>   <span class="cmt"># >= 1.7 et < 2.0</span>
+  required_providers {
+    azurerm = {
+      source  = <span class="str">"hashicorp/azurerm"</span>
+      version = <span class="str">"= 3.95.0"</span>       <span class="cmt"># version exacte</span>
+    }
+  }
+}
+
+<span class="cmt"># Opérateurs de version</span>
+<span class="cmt"># = 3.95.0   → exact</span>
+<span class="cmt"># ~> 3.90    → >= 3.90 et < 4.0 (patch OK)</span>
+<span class="cmt"># >= 3.0     → min seulement</span></div>
+      <div class="tip"><strong>📌 :</strong> Commiter le <code>.terraform.lock.hcl</code> dans git pour garantir les mêmes versions à tous les membres de l'équipe.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-icon icon-orange">🧹</div><h3>Qualité du code</h3></div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Pipeline qualité recommandé</span>
+
+<span class="cmt"># 1. Formatage</span>
+<span class="kw">terraform</span> fmt -recursive
+
+<span class="cmt"># 2. Validation</span>
+<span class="kw">terraform</span> validate
+
+<span class="cmt"># 3. Linter (TFLint)</span>
+tflint --init
+tflint
+
+<span class="cmt"># 4. Sécurité (Checkov)</span>
+pip install checkov
+checkov -d .
+
+<span class="cmt"># 5. Plan avant apply</span>
+<span class="kw">terraform</span> plan -out=<span class="str">plan.tfplan</span>
+<span class="kw">terraform</span> apply plan.tfplan</div>
+    </div>
+  </div>
+
+  <h4>📝 Template de variables — <code>secrets.tfvars.tpl</code></h4>
+  <div class="code-block" style="margin-bottom:1.5rem">
+    <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<span class="cmt"># Copier ce fichier en secrets.tfvars et remplir les valeurs</span>
+<span class="cmt"># NE PAS commiter secrets.tfvars dans git</span>
+
+subscription_id = <span class="str">"VOTRE_SUBSCRIPTION_ID"</span>
+tenant_id       = <span class="str">"VOTRE_TENANT_ID"</span>
+client_id       = <span class="str">"VOTRE_CLIENT_ID"</span>
+client_secret   = <span class="str">"VOTRE_CLIENT_SECRET"</span>
+db_password     = <span class="str">"UN_MOT_DE_PASSE_FORT"</span></div>
+</div>
+
+<!-- ==================== LIENS ==================== -->
+<div class="section" id="tab-liens">
+  <div class="section-title">🔗 Ressources & Liens</div>
+  <p class="section-subtitle">Documentation officielle, outils essentiels, formation</p>
+
+  <h4>📚 Documentation officielle</h4>
+  <a class="link-card" href="https://developer.hashicorp.com/terraform/docs" target="_blank">
+    <span class="lc-icon">📖</span>
+    <span class="lc-text"><strong>Terraform Documentation</strong><span>developer.hashicorp.com/terraform/docs</span></span>
+  </a>
+  <a class="link-card" href="https://registry.terraform.io/" target="_blank">
+    <span class="lc-icon">🔍</span>
+    <span class="lc-text"><strong>Terraform Registry</strong><span>Providers, modules, documentation — registry.terraform.io</span></span>
+  </a>
+  <a class="link-card" href="https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs" target="_blank">
+    <span class="lc-icon">☁️</span>
+    <span class="lc-text"><strong>Provider AzureRM — Documentation</strong><span>Toutes les ressources Azure disponibles</span></span>
+  </a>
+  <a class="link-card" href="https://developer.hashicorp.com/terraform/language" target="_blank">
+    <span class="lc-icon">📝</span>
+    <span class="lc-text"><strong>Référence HCL complète</strong><span>Tous les blocs, types, fonctions — developer.hashicorp.com</span></span>
+  </a>
+  <a class="link-card" href="https://developer.hashicorp.com/terraform/language/functions" target="_blank">
+    <span class="lc-icon">🔧</span>
+    <span class="lc-text"><strong>Toutes les fonctions HCL</strong><span>String, collection, numeric, filesystem, encoding…</span></span>
+  </a>
+
+  <h4>🛠️ Outils</h4>
+  <a class="link-card" href="https://developer.hashicorp.com/terraform/install" target="_blank">
+    <span class="lc-icon">⬇️</span>
+    <span class="lc-text"><strong>Installation Terraform CLI</strong><span>Windows, macOS, Linux — developer.hashicorp.com/terraform/install</span></span>
+  </a>
+  <a class="link-card" href="https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform" target="_blank">
+    <span class="lc-icon">💻</span>
+    <span class="lc-text"><strong>Extension VSCode — HashiCorp Terraform</strong><span>Syntaxe, auto-complétion, formatage</span></span>
+  </a>
+  <a class="link-card" href="https://github.com/terraform-linters/tflint" target="_blank">
+    <span class="lc-icon">🔍</span>
+    <span class="lc-text"><strong>TFLint</strong><span>Linter Terraform — bonnes pratiques, erreurs provider</span></span>
+  </a>
+  <a class="link-card" href="https://www.checkov.io/" target="_blank">
+    <span class="lc-icon">🔐</span>
+    <span class="lc-text"><strong>Checkov</strong><span>Analyse statique de sécurité pour Terraform</span></span>
+  </a>
+  <a class="link-card" href="https://opentofu.org/" target="_blank">
+    <span class="lc-icon">🌿</span>
+    <span class="lc-text"><strong>OpenTofu</strong><span>Fork open source de Terraform (post changement licence BSL)</span></span>
+  </a>
+  <a class="link-card" href="https://learn.microsoft.com/fr-fr/azure/developer/terraform/" target="_blank">
+    <span class="lc-icon">📘</span>
+    <span class="lc-text"><strong>Microsoft Learn — Terraform sur Azure</strong><span>Tutoriels officiels Microsoft</span></span>
+  </a>
+
+  <h4>⚡ Raccourcis clavier VSCode utiles</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Action</th><th>Windows/Linux</th><th>macOS</th></tr></thead>
+      <tbody>
+        <tr><td>Formater le fichier</td><td><code>Shift+Alt+F</code></td><td><code>Shift+Option+F</code></td></tr>
+        <tr><td>Ouvrir terminal intégré</td><td><code>Ctrl+`</code></td><td><code>Ctrl+`</code></td></tr>
+        <tr><td>Palette de commandes</td><td><code>Ctrl+Shift+P</code></td><td><code>Cmd+Shift+P</code></td></tr>
+        <tr><td>Rechercher dans les fichiers</td><td><code>Ctrl+Shift+F</code></td><td><code>Cmd+Shift+F</code></td></tr>
+        <tr><td>Renommer un symbole</td><td><code>F2</code></td><td><code>F2</code></td></tr>
+        <tr><td>Go to definition</td><td><code>F12</code></td><td><code>F12</code></td></tr>
+        <tr><td>Voir toutes les références</td><td><code>Shift+F12</code></td><td><code>Shift+F12</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== QUIZ ==================== -->
+<div class="section" id="tab-quiz">
+  <div class="section-title">🧠 Quiz de Révisions</div>
+  <p class="section-subtitle">Testez vos connaissances — cliquez sur une réponse pour la valider</p>
+
+  <div class="quiz-q">
+    <div class="question">1. Quelle commande doit être relancée après chaque modification du bloc <code>terraform {}</code> ou <code>provider {}</code> ?</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q1')">terraform plan</div>
+    <div class="quiz-option" onclick="answer(this, true, 'q1')">terraform init</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q1')">terraform validate</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q1')">terraform apply</div>
+    <div class="quiz-explanation" id="q1-exp">✅ <code>terraform init</code> télécharge les providers et configure le backend. Il doit être relancé à chaque changement du bloc <code>terraform {}</code>.</div>
+  </div>
+
+  <div class="quiz-q">
+    <div class="question">2. Dans le plan Terraform, quel symbole indique qu'une ressource va être <strong>détruite puis recrée</strong> (replace) ?</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q2')">~</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q2')">+</div>
+    <div class="quiz-option" onclick="answer(this, true, 'q2')">-/+</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q2')">!</div>
+    <div class="quiz-explanation" id="q2-exp">✅ <code>-/+</code> = destroy + recreate. <code>+</code> = création, <code>-</code> = destruction, <code>~</code> = mise à jour in-place.</div>
+  </div>
+
+  <div class="quiz-q">
+    <div class="question">3. Pourquoi préférer <code>for_each</code> plutôt que <code>count</code> ?</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q3')">for_each est plus rapide à exécuter</div>
+    <div class="quiz-option" onclick="answer(this, true, 'q3')">for_each utilise des clés stables — évite la destruction en cascade lors de modifications</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q3')">count ne fonctionne pas avec Azure</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q3')">for_each supporte les listes, count non</div>
+    <div class="quiz-explanation" id="q3-exp">✅ Avec <code>count</code>, les ressources sont indexées [0], [1]… Supprimer le 2e élément sur 3 provoque la destruction/recréation du 3e. <code>for_each</code> utilise des clés nommées, stables.</div>
+  </div>
+
+  <div class="quiz-q">
+    <div class="question">4. Le fichier <code>terraform.tfstate</code> doit-il être commité dans git ?</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q4')">Oui, pour permettre le travail en équipe</div>
+    <div class="quiz-option" onclick="answer(this, true, 'q4')">Non — il peut contenir des secrets en clair et crée des conflits</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q4')">Oui, uniquement en environnement de développement</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q4')">Seulement si chiffré</div>
+    <div class="quiz-explanation" id="q4-exp">✅ Le state ne doit jamais être dans git. Pour le travail en équipe, utiliser un backend distant (Azure Blob, S3…). Ajouter <code>*.tfstate</code> au <code>.gitignore</code>.</div>
+  </div>
+
+  <div class="quiz-q">
+    <div class="question">5. Quelle est la syntaxe pour référencer un attribut d'une ressource dans HCL ?</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q5')"><code>${resource.type.name.attribute}</code></div>
+    <div class="quiz-option" onclick="answer(this, true, 'q5')"><code>TYPE.NOM.ATTRIBUT</code></div>
+    <div class="quiz-option" onclick="answer(this, false, 'q5')"><code>ref(TYPE.NOM.ATTRIBUT)</code></div>
+    <div class="quiz-option" onclick="answer(this, false, 'q5')"><code>var.TYPE_NOM_ATTRIBUT</code></div>
+    <div class="quiz-explanation" id="q5-exp">✅ Ex: <code>azurerm_resource_group.rg.name</code> ou <code>azurerm_subnet.snet.id</code>. Cette référence crée automatiquement une dépendance implicite.</div>
+  </div>
+
+  <div class="quiz-q">
+    <div class="question">6. Que fait la commande <code>terraform state rm azurerm_resource_group.rg</code> ?</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q6')">Supprime le Resource Group dans Azure</div>
+    <div class="quiz-option" onclick="answer(this, true, 'q6')">Retire la ressource du state sans la supprimer dans Azure</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q6')">Équivalent à terraform destroy -target</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q6')">Supprime le fichier tfstate</div>
+    <div class="quiz-explanation" id="q6-exp">✅ <code>state rm</code> retire la ressource uniquement du state Terraform. La ressource continue d'exister dans Azure. Terraform ne la gérera plus, sauf si on la réimporte.</div>
+  </div>
+
+  <div class="quiz-q">
+    <div class="question">7. Quel bloc HCL permet de lire une ressource existante sans la créer ni la modifier ?</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q7')">resource</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q7')">locals</div>
+    <div class="quiz-option" onclick="answer(this, true, 'q7')">data</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q7')">import</div>
+    <div class="quiz-explanation" id="q7-exp">✅ Le bloc <code>data</code> est en lecture seule. Il interroge le provider pour récupérer des attributs d'une ressource existante. Référence : <code>data.TYPE.NOM.ATTRIBUT</code>.</div>
+  </div>
+
+  <div class="quiz-q">
+    <div class="question">8. Quelle est la différence entre l'approche déclarative et impérative en IAC ?</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q8')">Déclaratif = scripts bash ; Impératif = Terraform</div>
+    <div class="quiz-option" onclick="answer(this, true, 'q8')">Déclaratif décrit l'état souhaité (Terraform) ; Impératif décrit les étapes à exécuter (scripts)</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q8')">Déclaratif est plus rapide à exécuter</div>
+    <div class="quiz-option" onclick="answer(this, false, 'q8')">Il n'y a pas de différence significative</div>
+    <div class="quiz-explanation" id="q8-exp">✅ Terraform est déclaratif : on décrit ce qu'on veut (état final), et il calcule comment y arriver. L'impératif (scripts, Ansible en mode playbook) décrit les étapes précises dans l'ordre.</div>
+  </div>
+</div>
+
+</main>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function toggleAccordion(header) {
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+
+function copyCode(btn) {
+  const block = btn.parentElement;
+  const text = block.innerText.replace('copy\n', '').replace('copy', '');
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    btn.textContent = 'copied!';
+    btn.style.color = 'var(--accent)';
+    setTimeout(() => { btn.textContent = 'copy'; btn.style.color = ''; }, 1500);
+  });
+}
+
+function answer(el, correct, qId) {
+  const q = el.parentElement;
+  if (q.querySelector('.correct, .wrong')) return; // already answered
+  el.classList.add(correct ? 'correct' : 'wrong');
+  if (!correct) {
+    const options = q.querySelectorAll('.quiz-option');
+    // find and mark correct
+    const answers = { q1: 1, q2: 2, q3: 1, q4: 1, q5: 1, q6: 1, q7: 2, q8: 1 };
+    options[answers[qId]].classList.add('correct');
+  }
+  document.getElementById(qId + '-exp').classList.add('show');
+}
+</script>
+</body>
+</html>
