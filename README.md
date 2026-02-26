@@ -8,6 +8,6 @@ Thème:
 
 # Ressource : 
 - [Document Terraform Toolbox](./ressources/terraform-toolbox-eni.html)
--
+- [Document suivie MSP](./ressources/tp-atelier-azure-terraform.html)
 
 Partie 1 : Création du projet et des différents réseaux
