@@ -7,7 +7,7 @@ Thème:
 -> Ansible
 
 # Ressource : 
-- ![alt text](/ressources/terraform-toolbox-eni.html)
+- ![document](/ressources/terraform-toolbox-eni.html)
 -
 
 Partie 1 : Création du projet et des différents réseaux
